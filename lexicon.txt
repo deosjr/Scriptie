@@ -1,0 +1,22 @@
+#################################################
+#
+#               Sample Lexicon
+#
+#################################################
+
+de :: np/n
+man :: n
+slaapt :: np\s
+
+# Dit werkt nog niet maar wordt wel afgevangen
+man :: x
+
+# LIRA Figure 5
+from :: (s(/)s)(\)np
+to :: s/(np\s)
+
+# LIRA Figure 18
+subj :: (np/n)*n
+tv :: (np\s)/np
+det :: np/n
+noun :: n

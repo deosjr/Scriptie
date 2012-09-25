@@ -1,0 +1,18 @@
+A Theorem Prover for Lambek-Grishin Calculus
+
+Formula language:
+        A,B ::= p |             atoms (use alphanum)
+        A*B | B\A | A/B |       product
+        A(*)B | A(/)B | A(\)B   coproduct
+        =>                      inference
+        
+To use LaTeX commands as atoms, use |.
+For example: |phi will be translated to \phi
+
+Example call: python LGprover.py "np/n, n => np"
+
+To print to TeX, use -t. 
+So far this uses a method of printing written for 
+printing a single module, so the output is only
+really useful for debugging.
+For all options see argparser.py

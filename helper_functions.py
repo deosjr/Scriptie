@@ -24,7 +24,12 @@ def not_a_solution():
     
 
 def no_solutions():
-    print "There are no solutions"
+    print "\nThere are no solutions"
+    sys.exit()
+    
+    
+def syntax_error():
+    print "\nSyntax error in formula"
     sys.exit()
 
 

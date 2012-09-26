@@ -9,8 +9,8 @@
 # 1) Unfolding
 # 2) Pruning
 # 3) Combinatorics
-# 4) Soundness
-# 5) Semantics ?
+# 4) Proof Term
+# 5) Soundness
 
 from helper_functions import *
 import classes_linear as classes
@@ -41,6 +41,7 @@ def unfold_formula(formula, hypothesis=1):
     
 def unfold_all(sequentlist):
     classes.vertices = {}
+    classes.removed = 0
     hypotheses = [unfold_formula(x, True) for x in sequentlist[0]]
     conclusions = [unfold_formula(x, False) for x in sequentlist[1]]
     modules = hypotheses + conclusions
@@ -63,6 +64,10 @@ def main():
     # Parsing the sequent
     sequent = [map(lambda x : x.strip(), y) for y in
                 [z.split(",") for z in sequent.split("=>")]]
+                
+    if len(sequent) != 2:
+        syntax_error()
+         
     if lexicon:
         sequent = [map(lambda y : lookup(y, lexicon), x) for x in sequent]
     
@@ -143,24 +148,26 @@ def main():
             link = classes.Link(b[1],b[0])
             if not link.contract():
                 proof_net.add_link(link)    
-                
-        proof_net.print_debug()
         
         # Checks: mu / comu bijection
         if not proof_net.bijection():
             not_a_solution()
-            break
+            continue
+            
+        # 4) Proof term
+        # TODO: Compound Graph Traversal
+        # NOTE: Can only be done on non-contracted net
         
-        # 4) Soundness
-        # TODO: Try to contract
+        # 5) Soundness
+        # Try to contract
         # TODO: Check whether structure can be reduced to proof net
-        # TODO: Check: Connectedness of the whole structure
-        if not proof_net.connected():
-            not_a_solution()
-            break
         
-        # 5) Semantics ?
-        # TODO: Net traversal
+        # TODO: Check: Connectedness of the whole structure
+        # Traversal, checking total connectedness and acyclicity
+        # NOTE: Can only be checked on contracted net
+        if not proof_net.traversal():
+            not_a_solution()
+            continue
         
         # Print to TeX
         if args.tex:
@@ -168,10 +175,10 @@ def main():
             first = False
 
         # For debugging
-        #for x in modules:
-        #    x.print_debug()  
+        proof_net.print_debug() 
+        print len(classes.vertices)
       
-    if args.tex:
+    if args.tex and not first:
         # End of document
         f = open('formula.tex', 'a')
         f.write('\end{document}')

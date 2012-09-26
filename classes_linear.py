@@ -5,6 +5,7 @@ import sys
 drawn = []
 texlist = []
 vertices = {}
+removed = 0
 
 
 class ProofStructure(object):
@@ -44,10 +45,29 @@ class ProofStructure(object):
             else:
                 count -= 1
         return count == 0
+    
+    # Traversal is called on the whole structure,
+    # of which main is the main vertex of the 
+    # first hypothesis module
+    def traversal(self):
+        global vertices
+        (vertex, tensor, acyclic) = self.search(self.main, self.main.conclusion, [self.main], [])
+        if acyclic:
+            if len(vertex) == len(vertices) and len(tensor) == len(self.tensors):
+                return True
+        return True# TODO -> False
         
-    def connected(self):
-        #TODO
-        return True
+    def search(self, origin, object, vertex, tensor):
+        if object is None or isinstance(object, str):
+            return ([],[],True)
+        elif isinstance(object, OneHypothesis):
+            if object.top is not origin:
+                (v1,t1,a1) = self.search(object.top)
+            #TODO
+            return ([],[],True)
+        elif isinstance(object, TwoHypotheses):
+            #TODO
+            return ([],[],True)        
         
     def join(self, module):
         # Temporary fix on order for printing
@@ -59,7 +79,7 @@ class ProofStructure(object):
         self.tensors += module.tensors
         self.links += module.links
         
-        module = None
+        del module
         
     def toTeX(self, first):    
         global texlist, drawn
@@ -163,10 +183,10 @@ def adjust_xy(previous, current):
 class Vertex(object):
 
     def __init__(self, formula=None, hypo=None):
-        global vertices
+        global vertices, removed
         self.set_hypothesis(None)
         self.set_conclusion(None)
-        self.alpha = len(vertices)
+        self.alpha = len(vertices) + removed
         self.is_value = True       # if False then is_context
         vertices[self.alpha] = self
         if formula is not None:
@@ -249,8 +269,7 @@ class Vertex(object):
         try:
             (left, connective, right) = search.groups()
         except AttributeError: 
-            print "Syntax error in formula"
-            sys.exit()
+            syntax_error()
         vertex = Vertex(formula)
         if hypo:
             link = Link(self.alpha,vertex.alpha)
@@ -415,7 +434,8 @@ class TwoHypotheses(Tensor):
             self.topRight = vertex
         elif self.bottom == replace:
             self.bottom = vertex
-        vertices[replace.alpha] = None
+        del vertices[replace.alpha]
+        removed += 1
         
         
 class Link(object):
@@ -431,7 +451,8 @@ class Link(object):
         global vertices, removed
         if self.top.is_value == self.bottom.is_value:
             if not isinstance(self.bottom.conclusion, Tensor):
-                vertices[self.bottom.alpha] = None
+                del vertices[self.bottom.alpha]
+                removed += 1
             else:
                 self.top.set_conclusion(self.bottom.conclusion)
                 self.bottom.conclusion.replace(self.bottom, self.top)

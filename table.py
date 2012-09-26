@@ -35,7 +35,7 @@ class Table(object):
             for y in range(0, len(self.conclusions)):
                 h = self.hypotheses[x]
                 c = self.conclusions[y]
-                if h.conclusion is c.hypothesis:
+                if isinstance(h.conclusion, classes.Tensor) and h.conclusion is c.hypothesis:
                     self.table[x][y] = False                    
         
     def prune_connectedness(self):

@@ -20,8 +20,6 @@ class ProofStructure(object):
         
     def print_debug(self):
         print ""
-        print [x.main for x in self.hypotheses]
-        print [x.main for x in self.conclusions]
         print [(x.top.alpha,x.bottom.alpha) for x in self.links]
         
     def add_tensor(self, tensor):

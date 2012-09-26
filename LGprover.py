@@ -98,10 +98,10 @@ def main():
     for t in chart.values():
         t.create_table()
         
-    # TODO: Checks: acyclicity
-        #t.prune_acyclicity()
+    # Checks: (simple) acyclicity
+        t.prune_acyclicity()
     
-    # TODO: Checks: connectedness
+    # TODO: Checks: (simple) connectedness
         #t.prune_connectedness()
         
     # Checks: Co-tensor will never contract
@@ -152,13 +152,12 @@ def main():
             break
         
         # 4) Soundness
+        # TODO: Try to contract
         # TODO: Check whether structure can be reduced to proof net
         # TODO: Check: Connectedness of the whole structure
         if not proof_net.connected():
             not_a_solution()
             break
-            
-        # TODO: Try to contract
         
         # 5) Semantics ?
         # TODO: Net traversal

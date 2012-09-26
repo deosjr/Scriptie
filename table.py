@@ -26,17 +26,26 @@ class Table(object):
     def create_table(self):
         n = len(self.hypotheses)
         self.table = [[True]*n for i in range(n)]
-        
+    
+    # Linking two atoms both bound
+    # to the same tensor leads to
+    # acyclicity
     def prune_acyclicity(self):    
         for x in range(0, len(self.hypotheses)):
             for y in range(0, len(self.conclusions)):
-                print "TODO" 
+                h = self.hypotheses[x]
+                c = self.conclusions[y]
+                if h.conclusion is c.hypothesis:
+                    self.table[x][y] = False                    
         
     def prune_connectedness(self):
         for x in range(0, len(self.hypotheses)):
             for y in range(0, len(self.conclusions)):
                 print "TODO"
-                
+    
+    # A cotensor will only contract 
+    # if both of its non-main bindings
+    # are bound to another tensor
     def prune_cotensor(self):
         for x in range(0, len(self.hypotheses)):
             for y in range(0, len(self.conclusions)):
@@ -44,10 +53,12 @@ class Table(object):
                 c = self.conclusions[y]
                 cH = c.hypothesis
                 hC = h.conclusion
-                if h.is_lexical_item() and isinstance(cH, classes.OneHypothesis) and cH.is_cotensor():
-                    self.table[x][y] = False
-                if c.is_lexical_item() and isinstance(hC, classes.TwoHypotheses) and hC.is_cotensor():
-                    self.table[x][y] = False
+                if h.is_lexical_item() and isinstance(cH, classes.Tensor):
+                    if cH.is_cotensor() and cH.arrow != c.alpha:
+                        self.table[x][y] = False
+                elif c.is_lexical_item() and isinstance(hC, classes.Tensor):
+                    if hC.is_cotensor() and hC.arrow != h.alpha:
+                        self.table[x][y] = False
         
     def combine(self):
         self.atom_bindings = self.dfs(0,[],[])

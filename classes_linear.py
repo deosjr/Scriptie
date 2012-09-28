@@ -21,6 +21,8 @@ class ProofStructure(object):
         
     def print_debug(self):
         print ""
+        print [x.alpha for x in self.tensors]
+        print self.order
         print [(x.top.alpha,x.bottom.alpha) for x in self.links]
         
     def add_tensor(self, tensor):
@@ -80,6 +82,46 @@ class ProofStructure(object):
         self.links += module.links
         
         del module
+        
+    def contract(self):
+        contracted = False
+        
+        for t in self.tensors:
+            if t.is_cotensor():
+                
+                (complement, c_main, t_top) = t.contractions()
+                if complement is not None:
+                    
+                    link = None
+                    if t_top:
+                        link = Link(t.arrow, c_main.alpha)
+                    else:
+                        link = Link(c_main.alpha, t.arrow)
+                    link.collapse_link()
+                
+                    # Removing the tensor
+                    a = complement.alpha
+                    self.tensors.remove(complement)
+                    del complement
+                    self.order.remove(a)
+                    for i in range(len(self.order)):
+                        if self.order[i] > a:
+                            self.order[i] = self.order[i] - 1
+                
+                    # Removing the cotensor
+                    a = t.alpha
+                    self.tensors.remove(t)
+                    del t
+                    self.order.remove(a)
+                    for i in range(len(self.order)):
+                        if self.order[i] > a:
+                            self.order[i] = self.order[i] - 1
+                            
+                    contracted = True
+                    break
+                
+        if contracted:
+            self.contract()
         
     def toTeX(self, first):    
         global texlist, drawn
@@ -392,6 +434,27 @@ class OneHypothesis(Tensor):
         elif self.bottomRight == replace:
             self.bottomRight = vertex
     
+    # Can this cotensor contract?
+    # If so, return the tensor it contracts with
+    def contractions(self):
+        if isinstance(self.top.hypothesis, TwoHypotheses):
+            t = self.top.hypothesis
+            if not t.is_cotensor():
+                if self.bottomLeft.conclusion is t:
+                    # R\
+                    return (t, t.topRight, False)
+                elif self.bottomRight.conclusion is t:
+                    # R/
+                    return (t, t.topLeft, False)
+        elif isinstance(self.bottomLeft.conclusion, TwoHypotheses):
+            t = self.bottomLeft.conclusion
+            if not t.is_cotensor():
+                if self.bottomRight.conclusion is t:
+                    # L*
+                    return (t, t.bottom, True)
+        return (None, None, None)
+           
+    
     
 class TwoHypotheses(Tensor):
 
@@ -437,6 +500,26 @@ class TwoHypotheses(Tensor):
         del vertices[replace.alpha]
         removed += 1
         
+    # Can this cotensor contract?
+    # If so, return the tensor it contracts with
+    def contractions(self):
+        if isinstance(self.bottom.conclusion, OneHypothesis):
+            t = self.bottom.conclusion
+            if not t.is_cotensor():
+                if self.topLeft.hypothesis is t:
+                    # L(\)
+                    return (t, t.bottomRight, True)
+                elif self.topRight.hypothesis is t:
+                    # L(/)
+                    return (t, t.bottomLeft, True)
+        elif isinstance(self.topLeft.hypothesis, OneHypothesis):
+            t = self.topLeft.hypothesis
+            if not t.is_cotensor():
+                if self.topRight.hypothesis is t:
+                    # R(*)
+                    return (t, t.top, False)
+        return (None, None, None)
+        
         
 class Link(object):
     
@@ -448,16 +531,19 @@ class Link(object):
         self.bottom.set_hypothesis(self)
         
     def contract(self):
-        global vertices, removed
         if self.top.is_value == self.bottom.is_value:
-            if not isinstance(self.bottom.conclusion, Tensor):
-                del vertices[self.bottom.alpha]
-                removed += 1
-            else:
-                self.top.set_conclusion(self.bottom.conclusion)
-                self.bottom.conclusion.replace(self.bottom, self.top)
+            self.collapse_link()
             return True
         return False
+        
+    def collapse_link(self):
+        global vertices, removed
+        if not isinstance(self.bottom.conclusion, Tensor):
+            del vertices[self.bottom.alpha]
+            removed += 1
+        else:
+            self.top.set_conclusion(self.bottom.conclusion)
+            self.bottom.conclusion.replace(self.bottom, self.top)
         
     def is_command(self):
         if self.top.is_value:

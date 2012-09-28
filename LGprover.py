@@ -161,6 +161,24 @@ def main():
         # 5) Soundness
         # Try to contract
         # TODO: Check whether structure can be reduced to proof net
+        # First version: try to contract each cotensor immediately
+        # TODO: Structural rules
+        
+        # Collapse all links, not needed anymore
+        for l in proof_net.links:
+            l.collapse_link()
+        proof_net.links = []
+        proof_net.contract()
+        
+        # TODO: This code hides all solutions that
+        # rely on structural rules for contraction!
+        cotensor = False
+        for t in proof_net.tensors:
+            if t.is_cotensor():
+                cotensor = True
+                break
+        if cotensor:
+            continue            
         
         # TODO: Check: Connectedness of the whole structure
         # Traversal, checking total connectedness and acyclicity

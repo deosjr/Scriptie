@@ -47,29 +47,6 @@ class ProofStructure(object):
             else:
                 count -= 1
         return count == 0
-    
-    # Traversal is called on the whole structure,
-    # of which main is the main vertex of the 
-    # first hypothesis module
-    def traversal(self):
-        global vertices
-        (vertex, tensor, acyclic) = self.search(self.main, self.main.conclusion, [self.main], [])
-        if acyclic:
-            if len(vertex) == len(vertices) and len(tensor) == len(self.tensors):
-                return True
-        return True# TODO -> False
-        
-    def search(self, origin, object, vertex, tensor):
-        if object is None or isinstance(object, str):
-            return ([],[],True)
-        elif isinstance(object, OneHypothesis):
-            if object.top is not origin:
-                (v1,t1,a1) = self.search(object.top)
-            #TODO
-            return ([],[],True)
-        elif isinstance(object, TwoHypotheses):
-            #TODO
-            return ([],[],True)        
         
     def join(self, module):
         # Temporary fix on order for printing
@@ -89,36 +66,52 @@ class ProofStructure(object):
         for t in self.tensors:
             if t.is_cotensor():
                 
-                (complement, c_main, t_top) = t.contractions()
+                (complement, c_main, t_top, s) = t.contractions(self)
+                print t.contractions(self)
                 if complement is not None:
-                    
+                    # Simple contraction, L* and R(*)
                     link = None
-                    if t_top:
-                        link = Link(t.arrow, c_main.alpha)
+                    if not s:
+                        if t_top:
+                            link = Link(t.arrow, c_main.alpha)
+                        else:
+                            link = Link(c_main.alpha, t.arrow)
+
+                    # Generalized contraction, R/, R\, L(/) and L(\)
                     else:
-                        link = Link(c_main.alpha, t.arrow)
+                        link2 = None
+                        if t_top:
+                            link = Link(t.arrow, t.bottom.alpha)
+                            link2 = Link(complement.top.alpha, c_main.alpha)
+                        else:
+                            link = Link(t.top.alpha, t.arrow)
+                            link2 = Link(c_main.alpha, complement.bottom.alpha)
+                        link2.collapse_link()
+                            
                     link.collapse_link()
-                
+                    
                     # Removing the tensor
                     a = complement.alpha
                     self.tensors.remove(complement)
                     del complement
-                    self.order.remove(a)
-                    for i in range(len(self.order)):
-                        if self.order[i] > a:
-                            self.order[i] = self.order[i] - 1
+                    if a in self.order:
+                        self.order.remove(a)
+                        for i in range(len(self.order)):
+                            if self.order[i] > a:
+                                self.order[i] = self.order[i] - 1
                 
                     # Removing the cotensor
                     a = t.alpha
                     self.tensors.remove(t)
                     del t
-                    self.order.remove(a)
-                    for i in range(len(self.order)):
-                        if self.order[i] > a:
-                            self.order[i] = self.order[i] - 1
+                    if a in self.order:
+                        self.order.remove(a)
+                        for i in range(len(self.order)):
+                            if self.order[i] > a:
+                                self.order[i] = self.order[i] - 1
                             
                     contracted = True
-                    break
+                    break                        
                 
         if contracted:
             self.contract()
@@ -166,7 +159,15 @@ class ProofStructure(object):
         y = 0
         
         if not self.tensors:
-            f.write(self.main.toTeX(x, y, self.main.main, self))
+            #f.write(self.main.toTeX(x, y, self.main.main, self))
+            f.write("\\node at (0,0) [")
+            if self.main.hypothesis is not None:
+                f.write("label=above:${0}$".format(operators_to_TeX(self.main.hypothesis)))
+            if self.main.hypothesis is not None and self.main.conclusion is not None:
+                f.write(", ")
+            if self.main.conclusion is not None:
+                f.write("label=below:${0}$".format(operators_to_TeX(self.main.conclusion)))
+            f.write("] {.};\n")
            
         else:   
             # Shuffle self.tensors according to order
@@ -392,6 +393,16 @@ class Tensor(object):
                 vertex.main = part
             return vertex
             
+    def neighbors(self):
+        n = []
+        for h in self.get_hypotheses():
+            if isinstance(h.hypothesis, Tensor):
+                n.append(h.hypothesis)
+        for c in self.get_conclusions():
+            if isinstance(c.conclusion, Tensor):
+                n.append(c.conclusion)
+        return n
+            
   
 class OneHypothesis(Tensor):
 
@@ -427,33 +438,42 @@ class OneHypothesis(Tensor):
         return s1 + s2
         
     def replace(self, replace, vertex):
+        global vertices, removed
+        if self.is_cotensor() and self.arrow == replace.alpha:
+            self.arrow = vertex.alpha
         if self.top == replace:
             self.top = vertex
         elif self.bottomLeft == replace:
             self.bottomLeft = vertex
         elif self.bottomRight == replace:
             self.bottomRight = vertex
+        del vertices[replace.alpha]
+        removed += 1
     
     # Can this cotensor contract?
     # If so, return the tensor it contracts with
-    def contractions(self):
-        if isinstance(self.top.hypothesis, TwoHypotheses):
-            t = self.top.hypothesis
-            if not t.is_cotensor():
-                if self.bottomLeft.conclusion is t:
-                    # R\
-                    return (t, t.topRight, False)
-                elif self.bottomRight.conclusion is t:
-                    # R/
-                    return (t, t.topLeft, False)
-        elif isinstance(self.bottomLeft.conclusion, TwoHypotheses):
+    def contractions(self, net):
+        if isinstance(self.bottomLeft.conclusion, TwoHypotheses):
             t = self.bottomLeft.conclusion
             if not t.is_cotensor():
                 if self.bottomRight.conclusion is t:
                     # L*
-                    return (t, t.bottom, True)
-        return (None, None, None)
-           
+                    return (t, t.bottom, True, [])
+                    
+                s = shortest_path(net, self, t)
+                if only_grishin_tensors(s):
+                    #R\   
+                    return (t, t.topRight, False, s)
+                
+        elif isinstance(self.bottomRight.conclusion, TwoHypotheses):
+            t = self.bottomRight.conclusion
+            if not t.is_cotensor():
+                s = shortest_path(net, self, t)
+                if only_grishin_tensors(s):
+                    #R/  
+                    return (t, t.topLeft, False, s)
+        
+        return (None, None, None, None)           
     
     
 class TwoHypotheses(Tensor):
@@ -491,6 +511,8 @@ class TwoHypotheses(Tensor):
       
     def replace(self, replace, vertex):
         global vertices, removed
+        if self.is_cotensor() and self.arrow == replace.alpha:
+            self.arrow = vertex.alpha
         if self.topLeft == replace:
             self.topLeft = vertex
         elif self.topRight == replace:
@@ -502,23 +524,28 @@ class TwoHypotheses(Tensor):
         
     # Can this cotensor contract?
     # If so, return the tensor it contracts with
-    def contractions(self):
-        if isinstance(self.bottom.conclusion, OneHypothesis):
-            t = self.bottom.conclusion
-            if not t.is_cotensor():
-                if self.topLeft.hypothesis is t:
-                    # L(\)
-                    return (t, t.bottomRight, True)
-                elif self.topRight.hypothesis is t:
-                    # L(/)
-                    return (t, t.bottomLeft, True)
-        elif isinstance(self.topLeft.hypothesis, OneHypothesis):
+    def contractions(self, net):
+        if isinstance(self.topLeft.hypothesis, OneHypothesis):
             t = self.topLeft.hypothesis
             if not t.is_cotensor():
                 if self.topRight.hypothesis is t:
                     # R(*)
-                    return (t, t.top, False)
-        return (None, None, None)
+                    return (t, t.top, False, [])
+                    
+                s = shortest_path(net, self, t)
+                if only_lambek_tensors(s):
+                    # L(\)
+                    return (t, t.bottomRight, True, s)
+                
+        elif isinstance(self.topRight.hypothesis, OneHypothesis):
+            t = self.topRight.hypothesis
+            if not t.is_cotensor():
+                s = shortest_path(net, self, t)
+                if only_lambek_tensors(s):
+                    # L(/)
+                    return (t, t.bottomLeft, True, s)
+        
+        return (None, None, None, None)         
         
         
 class Link(object):
@@ -538,11 +565,11 @@ class Link(object):
         
     def collapse_link(self):
         global vertices, removed
+        self.top.set_conclusion(self.bottom.conclusion)
         if not isinstance(self.bottom.conclusion, Tensor):
             del vertices[self.bottom.alpha]
             removed += 1
         else:
-            self.top.set_conclusion(self.bottom.conclusion)
             self.bottom.conclusion.replace(self.bottom, self.top)
         
     def is_command(self):
@@ -558,3 +585,71 @@ class Link(object):
             return line
         else:
             return ""
+            
+
+# Dijkstra's algorithm            
+def shortest_path(proofnet, source, target):
+    dist = {}
+    previous = {}
+    q = []
+    
+    for t in proofnet.tensors:
+        # set distance to functional infinity
+        dist[t] = len(proofnet.tensors)
+        previous[t] = None
+        q.append(t)
+        
+    dist[source] = 0
+    
+    while q:
+        u = q[0]
+        for t in q[1:]:
+            if dist[t] < dist[u]:
+                u = t
+        q.remove(u)
+        if u is target:
+            break
+            
+        # This means there are tensors left 
+        # that are unreachable from source
+        if dist[u] == len(proofnet.tensors):
+            break 
+            
+        n = u.neighbors()
+        if u is source:
+            n.remove(target)
+            
+        for v in n:
+            if not v in q:
+                continue
+            alt = dist[u] + 1
+            if alt < dist[v]:
+                dist[v] = alt
+                previous[v] = u
+                
+    s = []
+    u = previous[target]
+    
+    while u in previous:
+        if u is not source:
+            s.insert(0,u)
+        u = previous[u]
+        
+    return s
+
+
+def only_grishin_tensors(path):
+    only_grishin = True
+    for t in path:
+        if t.is_cotensor() or isinstance(t, TwoHypotheses):
+            only_grishin = False
+            break
+    return only_grishin
+
+def only_lambek_tensors(path):
+    only_lambek = True
+    for t in path:
+        if t.is_cotensor() or isinstance(t, OneHypothesis):
+            only_lambek = False
+            break
+    return only_lambek

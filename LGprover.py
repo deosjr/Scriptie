@@ -147,7 +147,7 @@ def main():
         for b in possible_bindings[i]:
             link = classes.Link(b[1],b[0])
             if not link.contract():
-                proof_net.add_link(link)    
+                proof_net.add_link(link)
         
         # Checks: mu / comu bijection
         if not proof_net.bijection():
@@ -159,33 +159,26 @@ def main():
         # NOTE: Can only be done on non-contracted net
         
         # 5) Soundness
-        # Try to contract
-        # TODO: Check whether structure can be reduced to proof net
-        # First version: try to contract each cotensor immediately
-        # TODO: Structural rules
-        
         # Collapse all links, not needed anymore
         for l in proof_net.links:
             l.collapse_link()
         proof_net.links = []
+        
+        # Try to contract
         proof_net.contract()
         
-        # TODO: This code hides all solutions that
-        # rely on structural rules for contraction!
+        # If there are cotensors left, this is not a solution
         cotensor = False
         for t in proof_net.tensors:
             if t.is_cotensor():
                 cotensor = True
                 break
         if cotensor:
-            continue            
+            continue          
         
         # TODO: Check: Connectedness of the whole structure
         # Traversal, checking total connectedness and acyclicity
         # NOTE: Can only be checked on contracted net
-        if not proof_net.traversal():
-            not_a_solution()
-            continue
         
         # Print to TeX
         if args.tex:
@@ -194,7 +187,6 @@ def main():
 
         # For debugging
         proof_net.print_debug() 
-        print len(classes.vertices)
       
     if args.tex and not first:
         # End of document

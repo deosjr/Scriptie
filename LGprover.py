@@ -31,6 +31,11 @@ def unfold_formula(formula, hypothesis=1):
         structure.add_atom(vertex,hypothesis)
     else:
         vertex.unfold(formula, hypothesis, structure)     # Recursively unfold
+
+    for l in structure.links:
+        if l.contract():
+            structure.links.remove(l)
+    
     # Toggle whole formula
     p = argparser.Parser()
     args = p.get_arguments()
@@ -160,6 +165,7 @@ def main():
         
         # 4) Soundness
         # Collapse all links, not needed anymore
+        
         for l in proof_net.links:
             l.collapse_link()
         proof_net.links = []
@@ -176,7 +182,7 @@ def main():
         if cotensor_left:
             continue          
         
-        # TODO: Check: Connectedness of the whole structure
+        # Check: Connectedness of the whole structure
         # Traversal, checking total connectedness and acyclicity
         # NOTE: Can only be checked on contracted net
 

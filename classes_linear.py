@@ -346,8 +346,7 @@ class Vertex(object):
             t = (OneHypothesis(left, right, geometry, vertex, structure, hypo, i))
         else:
             t = (TwoHypotheses(left, right, geometry, vertex, structure, hypo, i))
-        if not link.contract():
-            structure.add_link(link)
+        structure.add_link(link)
                                     
                                
 class Tensor(object):

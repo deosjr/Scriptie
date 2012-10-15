@@ -18,10 +18,6 @@ def operators_to_TeX(string):
     string = string.replace("|", "\\")
     return string   
     
-    
-def not_a_solution():
-    print "This is not a solution"
-    
 
 def no_solutions():
     print "\nThere are no solutions"

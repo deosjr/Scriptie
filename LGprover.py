@@ -9,8 +9,8 @@
 # 1) Unfolding
 # 2) Pruning
 # 3) Combinatorics
-# 4) Proof Term
-# 5) Soundness
+# 4) Soundness
+# 5) Proof Term
 
 from helper_functions import *
 import classes_linear as classes
@@ -70,7 +70,7 @@ def main():
          
     if lexicon:
         sequent = [map(lambda y : lookup(y, lexicon), x) for x in sequent]
-    
+
     # 1) Unfolding
     # Links added as either command or mu/comu
     
@@ -134,7 +134,12 @@ def main():
     # This requires bindings to refer to indices
     # instead of Vertex objects (these are destroyed each unfolding)
     
-    first = True
+    no_solution = True
+    # Erase file
+    if args.tex:
+        f = open('formula.tex', 'w')
+        f.close()
+            
     for i in range(0,len(possible_bindings)):
     
         # Copy problem
@@ -151,14 +156,9 @@ def main():
         
         # Checks: mu / comu bijection
         if not proof_net.bijection():
-            not_a_solution()
             continue
-            
-        # 4) Proof term
-        # TODO: Compound Graph Traversal
-        # NOTE: Can only be done on non-contracted net
         
-        # 5) Soundness
+        # 4) Soundness
         # Collapse all links, not needed anymore
         for l in proof_net.links:
             l.collapse_link()
@@ -168,27 +168,36 @@ def main():
         proof_net.contract()
         
         # If there are cotensors left, this is not a solution
-        cotensor = False
+        cotensor_left = False
         for t in proof_net.tensors:
             if t.is_cotensor():
-                cotensor = True
+                cotensor_left = True
                 break
-        if cotensor:
+        if cotensor_left:
             continue          
         
         # TODO: Check: Connectedness of the whole structure
         # Traversal, checking total connectedness and acyclicity
         # NOTE: Can only be checked on contracted net
+
+        if proof_net.tensors:
+            if not proof_net.connected_acyclic():
+                continue
+        
+        # 5) Proof term
+        # TODO: Compound Graph Traversal
+        # NOTE: Can only be done on non-contracted net
         
         # Print to TeX
         if args.tex:
-            proof_net.toTeX(first)
-            first = False
+            proof_net.toTeX(no_solution)
+            
+        no_solution = False
 
         # For debugging
-        proof_net.print_debug() 
+        #proof_net.print_debug() 
       
-    if args.tex and not first:
+    if args.tex and not no_solution:
         # End of document
         f = open('formula.tex', 'a')
         f.write('\end{document}')
@@ -199,6 +208,9 @@ def main():
         elif platform.system() == 'Linux':
             os.system('pdfopen --file formula.pdf')
         # Mac OS X ?
+        
+    if no_solution:
+        no_solutions()
          
 if __name__ == '__main__':
     main()     

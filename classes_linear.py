@@ -67,7 +67,6 @@ class ProofStructure(object):
             if t.is_cotensor():
                 
                 (complement, c_main, t_top, s) = t.contractions(self)
-                print t.contractions(self)
                 if complement is not None:
                     # Simple contraction, L* and R(*)
                     link = None
@@ -115,14 +114,38 @@ class ProofStructure(object):
                 
         if contracted:
             self.contract()
+            
+    def connected_acyclic(self):
+        list = []
+        for t in self.tensors:
+            list.append(t)
+        checklist = [(list[0], None)]
+        connected_and_acyclic = True
+        
+        while checklist:
+            (tensor, previous) = checklist[0]
+            checklist.pop(0)
+            n = tensor.neighbors()
+            
+            if previous is not None:
+                test = len(n)
+                n = [x for x in n if x is not previous]
+                if test != (len(n) + 1):
+                    # Cycle found
+                    connected_and_acyclic = False
+                    break 
+                    
+            list.remove(tensor)
+            for t in n:
+                checklist.append((t, tensor))
+
+        if list:
+            # Disconnected part remains
+            connected_and_acyclic = False
+        return connected_and_acyclic            
         
     def toTeX(self, first):    
         global texlist, drawn
-        # Erase file
-        if first:
-            f = open('formula.tex', 'w')
-            f.close()
-        
         drawn = []
         texlist = []
         

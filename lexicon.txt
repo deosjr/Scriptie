@@ -8,7 +8,7 @@ de :: np/n
 man :: n
 slaapt :: np\s
 
-# Dit werkt nog niet maar wordt wel afgevangen
+# Double entries don't raise errors but are not considered (yet)
 man :: x
 
 # LIRA Figure 5
@@ -20,3 +20,10 @@ subj :: (np/n)*n
 tv :: (np\s)/np
 det :: np/n
 noun :: n
+
+# Time flies like an arrow
+time :: np
+flies :: np\s
+like :: ((np\s)\(np\s))/np
+an :: np/n
+arrow :: n

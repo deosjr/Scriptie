@@ -31,11 +31,14 @@ def unfold_formula(formula, hypothesis=1):
         structure.add_atom(vertex,hypothesis)
     else:
         vertex.unfold(formula, hypothesis, structure)     # Recursively unfold
-
+ 
+    to_remove = []
     for l in structure.links:
         if l.contract():
-            structure.links.remove(l)
-    
+            to_remove.append(l)           
+    for l in to_remove:
+        structure.links.remove(l)
+        
     # Toggle whole formula
     p = argparser.Parser()
     args = p.get_arguments()
@@ -146,7 +149,6 @@ def main():
         f.close()
             
     for i in range(0,len(possible_bindings)):
-    
         # Copy problem
         if i > 0:
             modules = unfold_all(sequent)
@@ -158,8 +160,8 @@ def main():
             link = classes.Link(b[1],b[0])
             if not link.contract():
                 proof_net.add_link(link)
-        
-        # Checks: mu / comu bijection
+                
+        # Checks: (mu / comu) -- command bijection
         if not proof_net.bijection():
             continue
         
@@ -201,7 +203,7 @@ def main():
         no_solution = False
 
         # For debugging
-        #proof_net.print_debug() 
+        proof_net.print_debug() 
       
     if args.tex and not no_solution:
         # End of document

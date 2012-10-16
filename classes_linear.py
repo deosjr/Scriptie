@@ -134,7 +134,10 @@ class ProofStructure(object):
                     # Cycle found
                     connected_and_acyclic = False
                     break 
-                    
+            if tensor not in list:
+                # Cycle found
+                connected_and_acyclic = False
+                break
             list.remove(tensor)
             for t in n:
                 checklist.append((t, tensor))
@@ -194,6 +197,9 @@ class ProofStructure(object):
            
         else:   
             # Shuffle self.tensors according to order
+            # Trimming order to size instead of
+            # losing myself in LaTeX-printing details
+            self.order = [x for x in self.order if x < len(self.tensors)]
             self.tensors = map(lambda x: self.tensors[x],self.order)
             previous_tensor = None
         
@@ -372,8 +378,8 @@ class Tensor(object):
             'f':(Tensor.attach,vertex),
             'l':(Tensor.eval_formula,left),
             'r':(Tensor.eval_formula,right),
-            'v':True,       #TODO
-            'e':False       #TODO
+            'v':True,       
+            'e':False       
         }
         return lookup
         

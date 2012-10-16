@@ -15,4 +15,6 @@ To print to TeX, use -t.
 So far this uses a method of printing written for 
 printing a single module, so the output is only
 really useful for debugging.
-For all options see argparser.py
+
+usage of a lexicon is now supported (basic)
+For all options see argparser.py or use --help

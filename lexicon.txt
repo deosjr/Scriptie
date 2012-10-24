@@ -27,3 +27,5 @@ flies :: np\s
 like :: ((np\s)\(np\s))/np
 an :: np/n
 arrow :: n
+
+tflaa :: np*((np\s)*((((np\s)\(np\s))/np)*((np/n)*n)))

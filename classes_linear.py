@@ -1,6 +1,7 @@
 from helper_functions import *
 import argparser
 import sys
+import pyparsing
 
 drawn = []
 texlist = []
@@ -332,15 +333,9 @@ class Vertex(object):
             
     # This is the source of the recursion        
     def unfold(self, formula, hypo, structure, i=None):
-        regexp = re.compile(
-        r"""(\(.+\)|[\w'{}|$]+)                     #left formula
-            (\*|\\|/|\(\*\)|\(/\)|\(\\\))           #main connective
-            (\(.+\)|[\w'{}|$]+)$                    #right formula
-        """, re.X)
-        search = regexp.match(formula)
         try:
-            (left, connective, right) = search.groups()
-        except AttributeError: 
+            [left, connective, right] = parse(formula)
+        except pyparsing.ParseException: 
             syntax_error()
         vertex = Vertex(formula)
         if hypo:

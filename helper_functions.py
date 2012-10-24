@@ -1,7 +1,29 @@
 import re
 import sys
+import pyparsing as p
 
 
+def parse(formula):
+    atom = p.Word(p.alphas + "'|{}$")
+    operator = p.oneOf("\\ / * (\\) (/) (*)")
+    bracket = p.oneOf("( )")
+    f = p.OneOrMore(atom | operator | bracket)
+    formula = f.parseString(formula)
+    check = [len(formula) for i in range(0, len(formula))]
+    operators = ["\\", "/", "*", "(\\)", "(/)", "(*)"]
+    symmetry = 0
+    for i,c in enumerate(formula):
+        if c is "(":
+            symmetry += 1
+        elif c is ")":
+            symmetry -= 1
+        if symmetry < 0:
+            syntax_error()
+        if c in operators:
+            check[i] = symmetry
+    main = check.index(min(check))
+    return ["".join(formula[:main]),formula[main],"".join(formula[main+1:])]
+    
 # This returns True if the formula contains no connectives.   
 def simple_formula(formula):
     connectives = re.compile(r"(\*|\\|/|\(\*\)|\(/\)|\(\\\))")

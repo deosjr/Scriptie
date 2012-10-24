@@ -57,6 +57,7 @@ def unfold_all(sequentlist):
 
     
 def main():
+
     p = argparser.Parser()
     args = p.get_arguments()
     if len(args.sequent) != 1:

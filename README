@@ -18,3 +18,6 @@ really useful for debugging.
 
 usage of a lexicon is now supported (basic)
 For all options see argparser.py or use --help
+
+Dependencies:
+Python Pyparsing Library - http://pyparsing.wikispaces.com/

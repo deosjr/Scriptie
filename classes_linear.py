@@ -7,6 +7,7 @@ drawn = []
 texlist = []
 vertices = {}
 removed = 0
+polarity = {}
 
 
 class ProofStructure(object):
@@ -598,6 +599,17 @@ class Link(object):
     def is_command(self):
         if self.top.is_value:
             return True
+        return False
+        
+    # Meaning whether the atomic formula is 
+    # positive (True) or negative (False)
+    # Only callable for mu/comu links
+    def positive(self):
+        if self.is_command():
+            return None
+        if self.top.main in polarity:
+            if polarity[self.top.main] is '+':
+                return True
         return False
         
     def draw_line(self):

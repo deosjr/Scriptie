@@ -3,6 +3,9 @@ import sys
 import pyparsing as p
 
 
+lexicon = {}
+
+
 def parse(formula):
     atom = p.Word(p.alphas + "'|{}$")
     operator = p.oneOf("\\ / * (\\) (/) (*)")
@@ -62,22 +65,29 @@ def lookup(label, lexicon):
 
 def build_lexicon(pathfile):
     lex = {}
+    pol = {}
     f = open(pathfile)
     for line in f:
         if line[0] != '#' and line[0] != '\n':
             
-            entry = line.split("::")
-            label = entry[0].strip()
-            atomic_value = entry[1]
-            match = re.search(r'[^\ ]\n$', line)
-            if match:
-               atomic_value = atomic_value[:-1]                    
-            if label in lex:
-                lex[label] += atomic_value.strip()
+            if '=' in line:
+                entry = line.split("=")
+                label = entry[0].strip()
+                polarity = entry[1].strip()
+                pol[label] = polarity
             else:
-                lex[label] = [atomic_value.strip()]
+                entry = line.split("::")
+                label = entry[0].strip()
+                atomic_value = entry[1]
+                match = re.search(r'[^\ ]\n$', line)
+                if match:
+                   atomic_value = atomic_value[:-1]                    
+                if label in lex:
+                    lex[label] += atomic_value.strip()
+                else:
+                    lex[label] = [atomic_value.strip()]
     f.close()
-    return lex
+    return lex, pol
 
     
 def type(connective, hypo):

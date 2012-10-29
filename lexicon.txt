@@ -4,6 +4,13 @@
 #
 #################################################
 
+# Polarity for atomic formulas
+# Given in a different format
+
+np = +
+n = +
+s = -
+
 de :: np/n
 man :: n
 slaapt :: np\s
@@ -29,3 +36,10 @@ an :: np/n
 arrow :: n
 
 tflaa :: np*((np\s)*((((np\s)\(np\s))/np)*((np/n)*n)))
+
+# Embedded
+mary :: np
+thinks :: (np\s)/s
+john :: np
+likes :: (np\s)/np
+nobody :: (s(/)s)(\)np

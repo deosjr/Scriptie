@@ -54,6 +54,45 @@ def unfold_all(sequentlist):
     conclusions = [unfold_formula(x, False) for x in sequentlist[1]]
     modules = hypotheses + conclusions
     return modules
+    
+    
+def create_composition_graph(sequent, possible_binding):
+    # Unfolding (again)
+    modules = unfold_all(sequent)   
+    
+    # Determining the components (maximal subgraphs)
+    # TODO: multiple components in a module?!
+    components = []
+    for m in modules:
+        if m.tensors:
+            components.append([x for x in m.tensors if not x.is_cotensor()])
+    
+    # Creating the composition graph
+    composition_graph = modules[0]
+    for m in modules[1:]:
+        composition_graph.join(m)
+    for b in possible_binding:
+        link = classes.Link(b[1],b[0])
+        if not link.contract():
+            composition_graph.add_link(link)    
+    
+    command = [l for l in composition_graph.links if l.is_command()]
+    mu_comu = [l for l in composition_graph.links if not l.is_command()]
+    
+    # Arranging commands to index of components
+    shuffled = [0 for x in command]
+    for l in command:
+        if isinstance(l.top.hypothesis, classes.Tensor):
+            for c in components:
+                if l.top.hypothesis in c:
+                    shuffled[components.index(c)] = l
+        if isinstance(l.bottom.conclusion, classes.Tensor):
+            for c in components:
+                if l.bottom.conclusion in c:
+                    shuffled[components.index(c)] = l
+    command = shuffled
+    
+    return composition_graph, components, command, mu_comu
 
     
 def main():
@@ -65,10 +104,8 @@ def main():
         sys.exit()
     sequent = args.sequent[0]
     
-    lexicon = {}
-    
     if args.lexicon:
-        lexicon = build_lexicon(args.lexicon)
+        lexicon, classes.polarity = build_lexicon(args.lexicon)
     
     # Parsing the sequent
     sequent = [map(lambda x : x.strip(), y) for y in
@@ -193,18 +230,104 @@ def main():
             if not proof_net.connected_acyclic():
                 continue
         
-        # 5) Proof term
-        # TODO: Compound Graph Traversal
-        # NOTE: Can only be done on non-contracted net
-        
         # Print to TeX
         if args.tex:
             proof_net.toTeX(no_solution)
             
         no_solution = False
+        
+        # 5) Proof term
+        # TODO: Compostion Graph Traversal
+        # NOTE: Can only be done on non-contracted net
+        
+        composition_graph, components, command, mu_comu = create_composition_graph(sequent, possible_bindings[i])
+        
+        # A simple version using as an example 
+        # subj, tv, det, noun => s
+        
+        # Step 1: create matchings
+        # TODO: Working assumptions: 
+        # For every component there is a command and a mu/comu link
+        # and there are n-1 mu/comu links between components
+        # where n is the number of components.
+        # Also, every command is connected to a different component
+        # and nothing else.
 
+        # Find all mu/comu links between 2 components
+        mu_binders = []
+        odd_mu_out = None
+        for l in mu_comu:
+            t = None
+            b = None
+            if isinstance(l.top.hypothesis, classes.Tensor):
+                for c in components:
+                    if l.top.hypothesis in c:
+                        t = components.index(c)
+            if isinstance(l.bottom.conclusion, classes.Tensor):
+                for c_ in components:
+                    if l.bottom.conclusion in c_:
+                        b = components.index(c_)
+            if t is not None and b is not None:
+                mu_binders.append((mu_comu.index(l),t,b))
+            if t is None:
+                odd_mu_out = (mu_comu.index(l),b)
+            if b is None:
+                odd_mu_out = (mu_comu.index(l),t)
+
+        matchings = []
+        
+        for p in list(itertools.permutations(mu_binders)):
+            matching = []
+            substitution = {}
+            for m in p:
+                origin = None
+                replacement = None
+                if mu_comu[m[0]].positive():
+                    origin = m[2]
+                    replacement = m[1]
+                else:
+                    origin = m[1]
+                    replacement = m[2]
+                if origin in substitution:
+                    origin = substitution[origin]
+                if replacement in substitution:
+                    replacement = substitution[replacement]
+                substitution[origin] = replacement
+                for k,v in substitution.items():
+                    if v == origin:
+                        substitution[k] = replacement 
+                matching.append(('c', origin))
+                matching.append(('m', m[0]))
+            matching.append(('c', substitution[odd_mu_out[1]]))
+            matching.append(('m', odd_mu_out[0]))
+            
+            matchings.append(matching)
+            
+        # Step 2: Calculate term in order of matching
+        # This is done separately for each matching
+        # on a new version of the composition graph
+        
+        for j,m in enumerate(matchings):
+            # TODO: Hmm, not sure if necessary
+            # Depends on implementation of terms
+            if j > 0:
+                composition_graph, components, command, mu_comu = create_composition_graph(sequent, possible_bindings[i])
+            
+            print m
+            
+            term = ""
+            
+            while m:
+                # Command
+                comm = m.pop(0)
+                
+                # (Possible) Cotensor(s)
+                
+                # Mu / Comu
+                mu = m.pop(0)
+            
         # For debugging
-        proof_net.print_debug() 
+        # proof_net.print_debug() 
       
     if args.tex and not no_solution:
         # End of document

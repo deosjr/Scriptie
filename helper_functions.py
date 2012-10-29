@@ -89,31 +89,32 @@ def build_lexicon(pathfile):
     f.close()
     return lex, pol
 
-    
-def type(connective, hypo):
-    types = {
-        # LIRa figure 14
-        # (con,hypo):(#premises,geometry)
-        # geometry: (f)ormula,(l)eft,(r)ight, (<)arrow to previous, 
-        # (v)alue, (e)context
-       
-        # Fusion connectives - hypothesis
-        ("/",1):(2,"frleve"),
-        ("*",1):(1,"f<lrvvv"),
-        ("\\",1):(2,"lfrvee"),
-        # Fusion connectives - conclusion
-        ("/",0):(1,"lf<reev"),
-        ("*",0):(2,"lrfvvv"),
-        ("\\",0):(1,"rlf<eve"),
-        # Fission connectives - hypothesis
-        ("(/)",1):(2,"f<rlvev"),
-        ("(*)",1):(1,"flreee"),
-        ("(\\)",1):(2,"lf<revv"),
-        # Fission connectives - conclusion
-        ("(/)",0):(1,"lfrvve"),
-        ("(*)",0):(2,"lrf<eee"),
-        ("(\\)",0):(1,"rlfvev")        
-    }
-    return types[(connective, hypo)] 
+
+tensor_table = {
+    # LIRa figure 14
+    # (con,hypo):(#premises,geometry,term)
+    # geometry: (f)ormula,(l)eft,(r)ight, (<)arrow to previous, 
+    # (v)alue, (e)context
+    # term: (t)op, (b)ottom, (l)eft, (r)ight
+    # "lr" with 2 premises meaning that the
+    # entire term is topleft - connective - topright
+   
+    # Fusion connectives - hypothesis
+    ("/",1):(2,"frleve","br"),
+    ("*",1):(1,"f<lrvvv","lr"),
+    ("\\",1):(2,"lfrvee","lb"),
+    # Fusion connectives - conclusion
+    ("/",0):(1,"lf<reev","tr"),
+    ("*",0):(2,"lrfvvv","lr"),
+    ("\\",0):(1,"rlf<eve","lt"),
+    # Fission connectives - hypothesis
+    ("(/)",1):(2,"f<rlvev","br"),
+    ("(*)",1):(1,"flreee","lr"),
+    ("(\\)",1):(2,"lf<revv","lb"),
+    # Fission connectives - conclusion
+    ("(/)",0):(1,"lfrvve","tr"),
+    ("(*)",0):(2,"lrf<eee","lr"),
+    ("(\\)",0):(1,"rlfvev","lt")        
+}
     
     

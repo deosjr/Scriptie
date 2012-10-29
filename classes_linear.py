@@ -8,6 +8,7 @@ texlist = []
 vertices = {}
 removed = 0
 polarity = {}
+next_alpha = 0
 
 
 class ProofStructure(object):
@@ -258,6 +259,7 @@ class Vertex(object):
 
     def __init__(self, formula=None, hypo=None):
         global vertices, removed
+        self.term = None
         self.set_hypothesis(None)
         self.set_conclusion(None)
         self.alpha = len(vertices) + removed
@@ -332,6 +334,54 @@ class Vertex(object):
         else:
             self.set_conclusion(label)
             
+    def get_term(self, hypo):
+        global next_alpha
+        if (self.term, hypo) in tensor_table:
+            (p, _, t) = tensor_table[(self.term,hypo)]
+            tensor = None
+            if hypo:
+                tensor = self.conclusion
+            else:
+                tensor = self.hypothesis
+            if tensor.is_cotensor():
+                self.term = chr(next_alpha + 96)
+                next_alpha += 1
+                return self.term
+            left = ""
+            right = ""
+            if p == 1:
+                if t[0] is 'l':
+                    left = tensor.bottomLeft.get_term(True)
+                if t[0] is 'r':
+                    left = tensor.bottomRight.get_term(True)
+                if t[0] is 't':
+                    left = tensor.top.get_term(False)
+                if t[1] is 'l':
+                    right = tensor.bottomLeft.get_term(True)
+                if t[1] is 'r':
+                    right = tensor.bottomRight.get_term(True)
+                if t[1] is 't':
+                    right = tensor.top.get_term(False)
+            if p == 2:
+                if t[0] is 'l':
+                    left = tensor.topLeft.get_term(False)
+                if t[0] is 'r':
+                    left = tensor.topRight.get_term(False)
+                if t[0] is 'b':
+                    left = tensor.bottom.get_term(True)
+                if t[1] is 'l':
+                    right = tensor.topLeft.get_term(False)
+                if t[1] is 'r':
+                    right = tensor.topRight.get_term(False)
+                if t[1] is 'b':
+                    right = tensor.bottom.get_term(True)
+            if not simple_formula(left):
+                left = '(' + left + ')'
+            if not simple_formula(right):
+                right = '(' + right + ')'
+            return left + self.term + right
+        return self.term
+            
     # This is the source of the recursion        
     def unfold(self, formula, hypo, structure, i=None):
         try:
@@ -339,11 +389,14 @@ class Vertex(object):
         except pyparsing.ParseException: 
             syntax_error()
         vertex = Vertex(formula)
+        if i is not None:
+            self.term = connective
+        vertex.term = connective
         if hypo:
             link = Link(self.alpha,vertex.alpha)
         else:
             link = Link(vertex.alpha,self.alpha)
-        (premises, geometry) = type(connective,hypo)
+        (premises, geometry, _) = tensor_table[(connective,hypo)]
         if premises == 1:
             t = (OneHypothesis(left, right, geometry, vertex, structure, hypo, i))
         else:
@@ -399,9 +452,12 @@ class Tensor(object):
         return vertex
         
     def eval_formula(self, part, hypo, is_value):
+        global next_alpha
         if simple_formula(part):
             atom = Vertex(part, hypo)
             self.structure.add_atom(atom, not hypo)
+            atom.term = chr(next_alpha + 96)
+            next_alpha += 1
             return self.attach(atom, hypo, is_value)
         else:
             vertex = Vertex() 
@@ -591,6 +647,7 @@ class Link(object):
         global vertices, removed
         self.top.set_conclusion(self.bottom.conclusion)
         if not isinstance(self.bottom.conclusion, Tensor):
+            self.top.term = self.bottom.term
             del vertices[self.bottom.alpha]
             removed += 1
         else:

@@ -23,10 +23,11 @@ import itertools
               
   
 # By default the formula appears in hypothesis position.  
-def unfold_formula(formula, hypothesis=1):
+def unfold_formula(formula, raw, hypothesis):
     vertex = classes.Vertex(formula, hypothesis)
     structure = classes.ProofStructure(formula, vertex)
     vertex.is_value = True      #TODO: check this
+    vertex.term = raw
     if simple_formula(formula):
         structure.add_atom(vertex,hypothesis)
     else:
@@ -47,18 +48,19 @@ def unfold_formula(formula, hypothesis=1):
     return structure
     
     
-def unfold_all(sequentlist):
+def unfold_all(sequentlist, raw):
     classes.vertices = {}
     classes.removed = 0
-    hypotheses = [unfold_formula(x, True) for x in sequentlist[0]]
-    conclusions = [unfold_formula(x, False) for x in sequentlist[1]]
+    classes.next_alpha = 0
+    hypotheses = [unfold_formula(x, y, True) for (x,y) in zip(sequentlist[0], raw[0])]
+    conclusions = [unfold_formula(x, y, False) for (x,y) in zip(sequentlist[1], raw[1])]
     modules = hypotheses + conclusions
     return modules
     
     
-def create_composition_graph(sequent, possible_binding):
+def create_composition_graph(sequent, raw, possible_binding):
     # Unfolding (again)
-    modules = unfold_all(sequent)   
+    modules = unfold_all(sequent, raw)   
     
     # Determining the components (maximal subgraphs)
     # TODO: multiple components in a module?!
@@ -75,6 +77,10 @@ def create_composition_graph(sequent, possible_binding):
         link = classes.Link(b[1],b[0])
         if not link.contract():
             composition_graph.add_link(link)    
+            
+    for l in composition_graph.links:
+        print l.top.get_term(False)
+        print l.bottom.get_term(True)
     
     command = [l for l in composition_graph.links if l.is_command()]
     mu_comu = [l for l in composition_graph.links if not l.is_command()]
@@ -102,25 +108,26 @@ def main():
     if len(args.sequent) != 1:
         p.print_help()
         sys.exit()
-    sequent = args.sequent[0]
+    raw_sequent = args.sequent[0]
     
     if args.lexicon:
         lexicon, classes.polarity = build_lexicon(args.lexicon)
     
     # Parsing the sequent
-    sequent = [map(lambda x : x.strip(), y) for y in
-                [z.split(",") for z in sequent.split("=>")]]
+    raw_sequent = [map(lambda x : x.strip(), y) for y in
+                [z.split(",") for z in raw_sequent.split("=>")]]
                 
-    if len(sequent) != 2:
+    if len(raw_sequent) != 2:
         syntax_error()
          
+    sequent = raw_sequent     
     if lexicon:
-        sequent = [map(lambda y : lookup(y, lexicon), x) for x in sequent]
+        sequent = [map(lambda y : lookup(y, lexicon), x) for x in raw_sequent]
 
     # 1) Unfolding
     # Links added as either command or mu/comu
     
-    modules = unfold_all(sequent)
+    modules = unfold_all(sequent, raw_sequent)
     
     # 2) Pruning
     # Checks: atom bijection
@@ -189,7 +196,7 @@ def main():
     for i in range(0,len(possible_bindings)):
         # Copy problem
         if i > 0:
-            modules = unfold_all(sequent)
+            modules = unfold_all(sequent, raw_sequent)
             
         proof_net = modules[0]
         for m in modules[1:]:
@@ -240,7 +247,7 @@ def main():
         # TODO: Compostion Graph Traversal
         # NOTE: Can only be done on non-contracted net
         
-        composition_graph, components, command, mu_comu = create_composition_graph(sequent, possible_bindings[i])
+        composition_graph, components, command, mu_comu = create_composition_graph(sequent, raw_sequent, possible_bindings[i])
         
         # A simple version using as an example 
         # subj, tv, det, noun => s
@@ -311,7 +318,7 @@ def main():
             # TODO: Hmm, not sure if necessary
             # Depends on implementation of terms
             if j > 0:
-                composition_graph, components, command, mu_comu = create_composition_graph(sequent, possible_bindings[i])
+                composition_graph, components, command, mu_comu = create_composition_graph(sequent, raw_sequent, possible_bindings[i])
             
             print m
             

@@ -166,8 +166,12 @@ class ProofStructure(object):
         else:
             f.write('\documentclass[tikz]{standalone}\n\n')
             f.write('\usepackage{tikz-qtree}\n')
-            f.write('\usepackage{stmaryrd}\n\n')
+            f.write('\usepackage{stmaryrd}\n')
+            f.write('\usepackage{scalefnt}\n')
+            f.write('\usepackage{amssymb}\n\n')
             f.write('\\begin{document}\n\n')
+            
+            f.write('\\tikzstyle{mybox} = [draw=red, fill=blue!20, very thick,rectangle, rounded corners, inner sep=10pt, inner ysep=20pt]\n\n')
             
             # Toggle rotation
             p = argparser.Parser()
@@ -333,7 +337,10 @@ class Vertex(object):
             self.set_hypothesis(label)
         else:
             self.set_conclusion(label)
-            
+    
+    # Important: use of hypo
+    # l.top.get_term(False)
+    # l.bottom.get_term(True)
     def get_term(self, hypo):
         global next_alpha
         if (self.term, hypo) in tensor_table:
@@ -346,7 +353,7 @@ class Vertex(object):
             if tensor.is_cotensor():
                 self.term = chr(next_alpha + 96)
                 next_alpha += 1
-                return self.term
+                return [self.term]
             left = ""
             right = ""
             if p == 1:
@@ -375,12 +382,12 @@ class Vertex(object):
                     right = tensor.topRight.get_term(False)
                 if t[1] is 'b':
                     right = tensor.bottom.get_term(True)
-            if not simple_formula(left):
-                left = '(' + left + ')'
-            if not simple_formula(right):
-                right = '(' + right + ')'
-            return left + self.term + right
-        return self.term
+            if not simple_formula("".join(left)):
+                left = ['('] + left + [')']
+            if not simple_formula("".join(right)):
+                right = ['('] + right + [')']
+            return left + [self.term] + right
+        return [self.term]
             
     # This is the source of the recursion        
     def unfold(self, formula, hypo, structure, i=None):

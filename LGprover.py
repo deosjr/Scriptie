@@ -77,10 +77,6 @@ def create_composition_graph(sequent, raw, possible_binding):
         link = classes.Link(b[1],b[0])
         if not link.contract():
             composition_graph.add_link(link)    
-            
-    for l in composition_graph.links:
-        print l.top.get_term(False)
-        print l.bottom.get_term(True)
     
     command = [l for l in composition_graph.links if l.is_command()]
     mu_comu = [l for l in composition_graph.links if not l.is_command()]
@@ -303,10 +299,13 @@ def main():
                 for k,v in substitution.items():
                     if v == origin:
                         substitution[k] = replacement 
-                matching.append(('c', origin))
-                matching.append(('m', m[0]))
-            matching.append(('c', substitution[odd_mu_out[1]]))
-            matching.append(('m', odd_mu_out[0]))
+                matching.append(origin)
+                matching.append(m[0])
+            odd = odd_mu_out[1]
+            if odd in substitution:
+                odd = substitution[odd]
+            matching.append(odd)
+            matching.append(odd_mu_out[0])
             
             matchings.append(matching)
             
@@ -314,24 +313,74 @@ def main():
         # This is done separately for each matching
         # on a new version of the composition graph
         
-        for j,m in enumerate(matchings):
-            # TODO: Hmm, not sure if necessary
-            # Depends on implementation of terms
-            if j > 0:
-                composition_graph, components, command, mu_comu = create_composition_graph(sequent, raw_sequent, possible_bindings[i])
+        f = open('formula.tex', 'a')
+        f.write("{\\scalefont{0.7}\n")
+        f.write("\\begin{tikzpicture}\n")
+        f.write("\\node [mybox] (box){\n")
+        f.write("\\begin{minipage}{0.50\\textwidth}\n")
+        
+        for m in matchings:
             
-            print m
-            
-            term = ""
+            term = []
+            subs = []
             
             while m:
                 # Command
-                comm = m.pop(0)
+                comlink = command[m.pop(0)]
+                left = comlink.top.get_term(False)
+                right = comlink.bottom.get_term(True)
+                for x in subs:
+                    if x in right:
+                        insertion = ['('] + term + [')']
+                        index = right.index(x)
+                        right = right[:index] + insertion + right[index+1:]
+                        break   # Because more than one substitution is not possible, right?
+                term = ['<'] + left + ['|'] + right + ['>']
                 
                 # (Possible) Cotensor(s)
                 
+                
                 # Mu / Comu
-                mu = m.pop(0)
+                mulink = mu_comu[m.pop(0)]
+                mu = []
+                source = None
+                target = None
+                if mulink.positive():
+                    mu = ["comu"]
+                    source = mulink.bottom.get_term(True)
+                    target = mulink.top.get_term(False)
+                else:
+                    mu = ["mu"]
+                    source = mulink.top.get_term(False)
+                    target = mulink.bottom.get_term(True)
+                    
+                term = mu + source + ['.'] + term   
+                subs.append(target[0])  
+
+            f.write("$")
+            for x in term:
+                translation = {
+                "mu":"\\mu",
+                "comu":"\\tilde{\\mu}",
+                "|":"\\upharpoonleft",
+                "<":"\\langle",
+                ">":"\\rangle",
+                '\\':"\\backslash",
+                "(*)":"\oplus",
+                "*":"\otimes",
+                "(/)":"\oslash",
+                "(\\)":"\obslash"
+                }
+                if x in translation:
+                    f.write(translation[x])
+                else:
+                    f.write(x)
+                f.write(" ")
+            f.write("$\n\n")  
+        
+        f.write("\end{minipage}\n\n};\n")
+        f.write("\end{tikzpicture}}\n")
+        f.close()
             
         # For debugging
         # proof_net.print_debug() 

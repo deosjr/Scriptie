@@ -349,8 +349,8 @@ class Vertex(object):
             if hypo:
                 tensor = self.conclusion
             else:
-                tensor = self.hypothesis
-            if tensor.is_cotensor():
+                tensor = self.hypothesis           
+            if tensor.is_cotensor() or isinstance(tensor, Link):
                 self.term = chr(next_alpha + 96)
                 next_alpha += 1
                 return [self.term]
@@ -403,11 +403,12 @@ class Vertex(object):
             link = Link(self.alpha,vertex.alpha)
         else:
             link = Link(vertex.alpha,self.alpha)
-        (premises, geometry, _) = tensor_table[(connective,hypo)]
+        (premises, geometry, term_geo) = tensor_table[(connective,hypo)]
         if premises == 1:
             t = (OneHypothesis(left, right, geometry, vertex, structure, hypo, i))
         else:
             t = (TwoHypotheses(left, right, geometry, vertex, structure, hypo, i))
+        t.term = term_geo
         structure.add_link(link)
                                     
                                
@@ -453,9 +454,11 @@ class Tensor(object):
     def is_cotensor(self):
         return hasattr(self, 'arrow')
         
-    def attach(self, vertex, hypo, is_value):
+    def attach(self, vertex, hypo, is_value, main=True):
         vertex.attach(self, not hypo)
         vertex.is_value = is_value
+        if main:
+            self.main = vertex
         return vertex
         
     def eval_formula(self, part, hypo, is_value):
@@ -465,10 +468,10 @@ class Tensor(object):
             self.structure.add_atom(atom, not hypo)
             atom.term = chr(next_alpha + 96)
             next_alpha += 1
-            return self.attach(atom, hypo, is_value)
+            return self.attach(atom, hypo, is_value, False)
         else:
             vertex = Vertex() 
-            self.attach(vertex, hypo, is_value)
+            self.attach(vertex, hypo, is_value, False)
             part = part[1:-1]
             vertex.unfold(part, not hypo, self.structure, self.index)
             # Toggle abstract
@@ -488,6 +491,18 @@ class Tensor(object):
         for c in self.get_conclusions():
             if isinstance(c.conclusion, Tensor):
                 n.append(c.conclusion)
+        return n
+        
+    def non_main_connections(self):
+        n = []
+        for h in self.get_hypotheses():
+            if not h is self.main:
+                if isinstance(h.hypothesis, Tensor) or isinstance(h.hypothesis, Link):
+                    n.append(h.hypothesis)
+        for c in self.get_conclusions():
+            if not c is self.main:
+                if isinstance(c.conclusion, Tensor) or isinstance(c.conclusion, Link):
+                    n.append(c.conclusion)
         return n
             
   
@@ -561,7 +576,26 @@ class OneHypothesis(Tensor):
                     return (t, t.topLeft, False, s)
         
         return (None, None, None, None)           
-    
+        
+    def get_term(self):
+        if isinstance(self.term, str):
+            t1 = None
+            t2 = None
+            if self.term[0] is 'l':
+                t1 = self.bottomLeft.term
+            if self.term[0] is 'r':
+                t1 = self.bottomRight.term
+            if self.term[0] is 't':
+                t1 = self.top.term
+            if self.term[1] is 'l':
+                t2 = self.bottomLeft.term
+            if self.term[1] is 'r':
+                t2 = self.bottomRight.term
+            if self.term[1] is 't':
+                t2 = self.top.term
+            self.term = ['\\frac{'] + [t1] + [t2] + ['}{'] + [self.main.term] + ['}']
+        return self.term
+        
     
 class TwoHypotheses(Tensor):
 
@@ -632,7 +666,26 @@ class TwoHypotheses(Tensor):
                     # L(/)
                     return (t, t.bottomLeft, True, s)
         
-        return (None, None, None, None)         
+        return (None, None, None, None)  
+
+    def get_term(self):
+        if isinstance(self.term, str):
+            t1 = None
+            t2 = None
+            if self.term[0] is 'l':
+                t1 = self.topLeft.term
+            if self.term[0] is 'r':
+                t1 = self.topRight.term
+            if self.term[0] is 'b':
+                t1 = self.bottom.term
+            if self.term[1] is 'l':
+                t2 = self.topLeft.term
+            if self.term[1] is 'r':
+                t2 = self.topRight.term
+            if self.term[1] is 'b':
+                t2 = self.bottom.term
+            self.term = ['\\frac{'] + [t1] + [t2] + ['}{'] + [self.main.term] + ['}']
+        return self.term
         
         
 class Link(object):
@@ -658,6 +711,7 @@ class Link(object):
             del vertices[self.bottom.alpha]
             removed += 1
         else:
+            self.bottom.term = self.top.term
             self.bottom.conclusion.replace(self.bottom, self.top)
         
     def is_command(self):

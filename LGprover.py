@@ -276,12 +276,28 @@ def main():
                 odd_mu_out = (mu_comu.index(l),b)
             if b is None:
                 odd_mu_out = (mu_comu.index(l),t)
-
+        
         matchings = []
         
+        # For each cotensor, find the tensor(s) its connected to directly
+        # Cotensors[index] = [cotensor, component1, component2]
+        # if connection is a link then the whole link is passed
+        cotensors = {}
+        for i,co in enumerate([x for x in composition_graph.tensors if x.is_cotensor()]):
+            [t1, t2] = co.non_main_connections()
+            i1 = t1
+            i2 = t2
+            for c in components:
+                if t1 in c:
+                    i1 = components.index(c)
+                if t2 in c:
+                    i2 = components.index(c)
+            cotensors[i] = [co, i1, i2]
+           
         for p in list(itertools.permutations(mu_binders)):
             matching = []
             substitution = {}
+            added_cotensors = []
             for m in p:
                 origin = None
                 replacement = None
@@ -299,19 +315,57 @@ def main():
                 for k,v in substitution.items():
                     if v == origin:
                         substitution[k] = replacement 
+                
+                cotensor_actions = []
+                for k,v in cotensors.items():  
+                    if k not in added_cotensors:
+                        if mu_comu[m[0]] in v:
+                            # Obviously TODO
+                            print "Not a clue what to do"
+                        if command[origin] in v:
+                            index = v.index(command[origin])
+                            v[index] = origin
+                            cotensors[k] = v
+                        if v[1] in substitution:
+                            v[1] = substitution[v[1]]
+                        if v[2] in substitution:
+                            v[2] = substitution[v[2]]
+                        if v[1] == v[2]:
+                            cotensor_actions.append(v[0])
+                            added_cotensors.append(k)
+                
                 matching.append(origin)
+                matching.extend(cotensor_actions)
                 matching.append(m[0])
-            odd = odd_mu_out[1]
-            if odd in substitution:
-                odd = substitution[odd]
-            matching.append(odd)
+              
+            odd_origin = odd_mu_out[1]
+            if odd_origin in substitution:
+                odd_origin = substitution[odd_origin]
+            matching.append(odd_origin)
+            
+            cotensor_actions = []
+            for k,v in cotensors.items():  
+                if k not in added_cotensors:
+                    if mu_comu[odd_mu_out[0]] in v:
+                        # Obviously TODO
+                        print "Not a clue what to do"
+                    if command[odd_origin] in v:
+                        index = v.index(command[odd_origin])
+                        v[index] = odd_origin
+                        cotensors[k] = v
+                    if v[1] in substitution:
+                        v[1] = substitution[v[1]]
+                    if v[2] in substitution:
+                        v[2] = substitution[v[2]]
+                    if v[1] == v[2]:
+                        cotensor_actions.append(v[0])
+            matching.extend(cotensor_actions)
+            
             matching.append(odd_mu_out[0])
             
-            matchings.append(matching)
+            matchings.append(matching)     
             
         # Step 2: Calculate term in order of matching
-        # This is done separately for each matching
-        # on a new version of the composition graph
         
         f = open('formula.tex', 'a')
         f.write("{\\scalefont{0.7}\n")
@@ -337,8 +391,9 @@ def main():
                         break   # Because more than one substitution is not possible, right?
                 term = ['<'] + left + ['|'] + right + ['>']
                 
-                # (Possible) Cotensor(s)
-                
+                # TODO: (Possible) Cotensor(s)
+                while isinstance(m[0], classes.Tensor):
+                    term = m.pop(0).get_term() + ['.'] + term
                 
                 # Mu / Comu
                 mulink = mu_comu[m.pop(0)]

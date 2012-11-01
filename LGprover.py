@@ -243,88 +243,117 @@ def main():
         # TODO: Compostion Graph Traversal
         # NOTE: Can only be done on non-contracted net
         
-        composition_graph, components, command, mu_comu = create_composition_graph(sequent, raw_sequent, possible_bindings[i])
+        if args.term:
         
-        # A simple version using as an example 
-        # subj, tv, det, noun => s
-        
-        # Step 1: create matchings
-        # TODO: Working assumptions: 
-        # For every component there is a command and a mu/comu link
-        # and there are n-1 mu/comu links between components
-        # where n is the number of components.
-        # Also, every command is connected to a different component
-        # and nothing else.
+            composition_graph, components, command, mu_comu = create_composition_graph(sequent, raw_sequent, possible_bindings[i])
+            
+            # A simple version using as an example 
+            # subj, tv, det, noun => s
+            
+            # Step 1: create matchings
+            # TODO: Working assumptions: 
+            # For every component there is a command and a mu/comu link
+            # and there are n-1 mu/comu links between components
+            # where n is the number of components.
+            # Also, every command is connected to a different component
+            # and nothing else.
 
-        # Find all mu/comu links between 2 components
-        mu_binders = []
-        odd_mu_out = None
-        for l in mu_comu:
-            t = None
-            b = None
-            if isinstance(l.top.hypothesis, classes.Tensor):
+            # Find all mu/comu links between 2 components
+            mu_binders = []
+            odd_mu_out = None
+            for l in mu_comu:
+                t = None
+                b = None
+                if isinstance(l.top.hypothesis, classes.Tensor):
+                    for c in components:
+                        if l.top.hypothesis in c:
+                            t = components.index(c)
+                if isinstance(l.bottom.conclusion, classes.Tensor):
+                    for c_ in components:
+                        if l.bottom.conclusion in c_:
+                            b = components.index(c_)
+                if t is not None and b is not None:
+                    mu_binders.append((mu_comu.index(l),t,b))
+                if t is None:
+                    odd_mu_out = (mu_comu.index(l),b)
+                if b is None:
+                    odd_mu_out = (mu_comu.index(l),t)
+            
+            matchings = []
+            
+            # For each cotensor, find the tensor(s) its connected to directly
+            # Cotensors[index] = [cotensor, component1, component2]
+            # if connection is a link then the whole link is passed
+            cotensors = {}
+            for i,co in enumerate([x for x in composition_graph.tensors if x.is_cotensor()]):
+                [t1, t2] = co.non_main_connections()
+                i1 = t1
+                i2 = t2
                 for c in components:
-                    if l.top.hypothesis in c:
-                        t = components.index(c)
-            if isinstance(l.bottom.conclusion, classes.Tensor):
-                for c_ in components:
-                    if l.bottom.conclusion in c_:
-                        b = components.index(c_)
-            if t is not None and b is not None:
-                mu_binders.append((mu_comu.index(l),t,b))
-            if t is None:
-                odd_mu_out = (mu_comu.index(l),b)
-            if b is None:
-                odd_mu_out = (mu_comu.index(l),t)
-        
-        matchings = []
-        
-        # For each cotensor, find the tensor(s) its connected to directly
-        # Cotensors[index] = [cotensor, component1, component2]
-        # if connection is a link then the whole link is passed
-        cotensors = {}
-        for i,co in enumerate([x for x in composition_graph.tensors if x.is_cotensor()]):
-            [t1, t2] = co.non_main_connections()
-            i1 = t1
-            i2 = t2
-            for c in components:
-                if t1 in c:
-                    i1 = components.index(c)
-                if t2 in c:
-                    i2 = components.index(c)
-            cotensors[i] = [co, i1, i2]
-           
-        for p in list(itertools.permutations(mu_binders)):
-            matching = []
-            substitution = {}
-            added_cotensors = []
-            for m in p:
-                origin = None
-                replacement = None
-                if mu_comu[m[0]].positive():
-                    origin = m[2]
-                    replacement = m[1]
-                else:
-                    origin = m[1]
-                    replacement = m[2]
-                if origin in substitution:
-                    origin = substitution[origin]
-                if replacement in substitution:
-                    replacement = substitution[replacement]
-                substitution[origin] = replacement
-                for k,v in substitution.items():
-                    if v == origin:
-                        substitution[k] = replacement 
+                    if t1 in c:
+                        i1 = components.index(c)
+                    if t2 in c:
+                        i2 = components.index(c)
+                cotensors[i] = [co, i1, i2]
+               
+            for p in list(itertools.permutations(mu_binders)):
+                matching = []
+                substitution = {}
+                added_cotensors = []
+                for m in p:
+                    origin = None
+                    replacement = None
+                    if mu_comu[m[0]].positive():
+                        origin = m[2]
+                        replacement = m[1]
+                    else:
+                        origin = m[1]
+                        replacement = m[2]
+                    if origin in substitution:
+                        origin = substitution[origin]
+                    if replacement in substitution:
+                        replacement = substitution[replacement]
+                    substitution[origin] = replacement
+                    for k,v in substitution.items():
+                        if v == origin:
+                            substitution[k] = replacement 
+                    
+                    cotensor_actions = []
+                    for k,v in cotensors.items():  
+                        if k not in added_cotensors:
+                            if mu_comu[m[0]] in v:
+                                # Obviously TODO
+                                print "Not a clue what to do"
+                            if command[origin] in v:
+                                index = v.index(command[origin])
+                                v[index] = origin
+                                cotensors[k] = v
+                            if v[1] in substitution:
+                                v[1] = substitution[v[1]]
+                            if v[2] in substitution:
+                                v[2] = substitution[v[2]]
+                            if v[1] == v[2]:
+                                cotensor_actions.append(v[0])
+                                added_cotensors.append(k)
+                    
+                    matching.append(origin)
+                    matching.extend(cotensor_actions)
+                    matching.append(m[0])
+                  
+                odd_origin = odd_mu_out[1]
+                if odd_origin in substitution:
+                    odd_origin = substitution[odd_origin]
+                matching.append(odd_origin)
                 
                 cotensor_actions = []
                 for k,v in cotensors.items():  
                     if k not in added_cotensors:
-                        if mu_comu[m[0]] in v:
+                        if mu_comu[odd_mu_out[0]] in v:
                             # Obviously TODO
                             print "Not a clue what to do"
-                        if command[origin] in v:
-                            index = v.index(command[origin])
-                            v[index] = origin
+                        if command[odd_origin] in v:
+                            index = v.index(command[odd_origin])
+                            v[index] = odd_origin
                             cotensors[k] = v
                         if v[1] in substitution:
                             v[1] = substitution[v[1]]
@@ -332,110 +361,87 @@ def main():
                             v[2] = substitution[v[2]]
                         if v[1] == v[2]:
                             cotensor_actions.append(v[0])
-                            added_cotensors.append(k)
-                
-                matching.append(origin)
                 matching.extend(cotensor_actions)
-                matching.append(m[0])
-              
-            odd_origin = odd_mu_out[1]
-            if odd_origin in substitution:
-                odd_origin = substitution[odd_origin]
-            matching.append(odd_origin)
-            
-            cotensor_actions = []
-            for k,v in cotensors.items():  
-                if k not in added_cotensors:
-                    if mu_comu[odd_mu_out[0]] in v:
-                        # Obviously TODO
-                        print "Not a clue what to do"
-                    if command[odd_origin] in v:
-                        index = v.index(command[odd_origin])
-                        v[index] = odd_origin
-                        cotensors[k] = v
-                    if v[1] in substitution:
-                        v[1] = substitution[v[1]]
-                    if v[2] in substitution:
-                        v[2] = substitution[v[2]]
-                    if v[1] == v[2]:
-                        cotensor_actions.append(v[0])
-            matching.extend(cotensor_actions)
-            
-            matching.append(odd_mu_out[0])
-            
-            matchings.append(matching)     
-            
-        # Step 2: Calculate term in order of matching
-        
-        f = open('formula.tex', 'a')
-        f.write("{\\scalefont{0.7}\n")
-        f.write("\\begin{tikzpicture}\n")
-        f.write("\\node [mybox] (box){\n")
-        f.write("\\begin{minipage}{0.50\\textwidth}\n")
-        
-        for m in matchings:
-            
-            term = []
-            subs = []
-            
-            while m:
-                # Command
-                comlink = command[m.pop(0)]
-                left = comlink.top.get_term(False)
-                right = comlink.bottom.get_term(True)
-                for x in subs:
-                    if x in right:
-                        insertion = ['('] + term + [')']
-                        index = right.index(x)
-                        right = right[:index] + insertion + right[index+1:]
-                        break   # Because more than one substitution is not possible, right?
-                term = ['<'] + left + ['|'] + right + ['>']
                 
-                # TODO: (Possible) Cotensor(s)
-                while isinstance(m[0], classes.Tensor):
-                    term = m.pop(0).get_term() + ['.'] + term
+                matching.append(odd_mu_out[0])
                 
-                # Mu / Comu
-                mulink = mu_comu[m.pop(0)]
-                mu = []
-                source = None
-                target = None
-                if mulink.positive():
-                    mu = ["comu"]
-                    source = mulink.bottom.get_term(True)
-                    target = mulink.top.get_term(False)
-                else:
-                    mu = ["mu"]
-                    source = mulink.top.get_term(False)
-                    target = mulink.bottom.get_term(True)
+                matchings.append(matching)     
+                
+            # Step 2: Calculate term in order of matching
+            
+            f = open('formula.tex', 'a')
+            f.write("{\\scalefont{0.7}\n")
+            f.write("\\begin{tikzpicture}\n")
+            f.write("\\node [mybox] (box){\n")
+            f.write("\\begin{minipage}{0.50\\textwidth}\n")
+            
+            for m in matchings:
+                
+                term = []
+                subs = []
+                
+                while m:
+                    # Command
+                    comlink = command[m.pop(0)]
+                    left = comlink.top.get_term(False)
+                    right = comlink.bottom.get_term(True)
+                    harpoon = ['|`']
+                    if comlink.positive:
+                        harpoon = ['/|']
+                    for x in subs:
+                        if x in right:
+                            insertion = ['('] + term + [')']
+                            index = right.index(x)
+                            right = right[:index] + insertion + right[index+1:]
+                            break   # Because more than one substitution is not possible, right?
+                    term = ['<'] + left + harpoon + right + ['>']
                     
-                term = mu + source + ['.'] + term   
-                subs.append(target[0])  
+                    # TODO: (Possible) Cotensor(s)
+                    while isinstance(m[0], classes.Tensor):
+                        term = m.pop(0).get_term() + ['.'] + term
+                    
+                    # Mu / Comu
+                    mulink = mu_comu[m.pop(0)]
+                    mu = []
+                    source = None
+                    target = None
+                    if mulink.positive():
+                        mu = ["comu"]
+                        source = mulink.bottom.get_term(True)
+                        target = mulink.top.get_term(False)
+                    else:
+                        mu = ["mu"]
+                        source = mulink.top.get_term(False)
+                        target = mulink.bottom.get_term(True)
+                        
+                    term = mu + source + ['.'] + term   
+                    subs.append(target[0])  
 
-            f.write("$")
-            for x in term:
-                translation = {
-                "mu":"\\mu",
-                "comu":"\\tilde{\\mu}",
-                "|":"\\upharpoonleft",
-                "<":"\\langle",
-                ">":"\\rangle",
-                '\\':"\\backslash",
-                "(*)":"\oplus",
-                "*":"\otimes",
-                "(/)":"\oslash",
-                "(\\)":"\obslash"
-                }
-                if x in translation:
-                    f.write(translation[x])
-                else:
-                    f.write(x)
-                f.write(" ")
-            f.write("$\n\n")  
-        
-        f.write("\end{minipage}\n\n};\n")
-        f.write("\end{tikzpicture}}\n")
-        f.close()
+                f.write("$")
+                for x in term:
+                    translation = {
+                    "mu":"\\mu",
+                    "comu":"\\tilde{\\mu}",
+                    "/|":"\\upharpoonleft",
+                    "|`":"\\upharpoonright",
+                    "<":"\\langle",
+                    ">":"\\rangle",
+                    '\\':"\\backslash",
+                    "(*)":"\oplus",
+                    "*":"\otimes",
+                    "(/)":"\oslash",
+                    "(\\)":"\obslash"
+                    }
+                    if x in translation:
+                        f.write(translation[x])
+                    else:
+                        f.write(x)
+                    f.write(" ")
+                f.write("$\n\n")  
+            
+            f.write("\end{minipage}\n\n};\n")
+            f.write("\end{tikzpicture}}\n")
+            f.close()
             
         # For debugging
         # proof_net.print_debug() 

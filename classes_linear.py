@@ -70,6 +70,7 @@ class ProofStructure(object):
             if t.is_cotensor():
                 
                 (complement, c_main, t_top, s) = t.contractions(self)
+                
                 if complement is not None:
                     # Simple contraction, L* and R(*)
                     link = None
@@ -558,22 +559,24 @@ class OneHypothesis(Tensor):
         if isinstance(self.bottomLeft.conclusion, TwoHypotheses):
             t = self.bottomLeft.conclusion
             if not t.is_cotensor():
-                if self.bottomRight.conclusion is t:
-                    # L*
-                    return (t, t.bottom, True, [])
+                if self.bottomLeft is t.topLeft:
+                    if self.bottomRight.conclusion is t:
+                            # L*
+                            return (t, t.bottom, True, [])
                     
-                s = shortest_path(net, self, t)
-                if only_grishin_tensors(s):
-                    #R\   
-                    return (t, t.topRight, False, s)
+                    s = shortest_path(net, self, t)
+                    if only_grishin_tensors(s):
+                        #R\   
+                        return (t, t.topRight, False, s)
                 
         elif isinstance(self.bottomRight.conclusion, TwoHypotheses):
             t = self.bottomRight.conclusion
             if not t.is_cotensor():
-                s = shortest_path(net, self, t)
-                if only_grishin_tensors(s):
-                    #R/  
-                    return (t, t.topLeft, False, s)
+                if self.bottomRight is t.topRight:
+                    s = shortest_path(net, self, t)
+                    if only_grishin_tensors(s):
+                        #R/  
+                        return (t, t.topLeft, False, s)
         
         return (None, None, None, None)           
         
@@ -649,22 +652,24 @@ class TwoHypotheses(Tensor):
         if isinstance(self.topLeft.hypothesis, OneHypothesis):
             t = self.topLeft.hypothesis
             if not t.is_cotensor():
-                if self.topRight.hypothesis is t:
-                    # R(*)
-                    return (t, t.top, False, [])
-                    
-                s = shortest_path(net, self, t)
-                if only_lambek_tensors(s):
-                    # L(\)
-                    return (t, t.bottomRight, True, s)
+                if self.topLeft is t.bottomLeft:
+                    if self.topRight.hypothesis is t:
+                        # R(*)
+                        return (t, t.top, False, [])
+                        
+                    s = shortest_path(net, self, t)
+                    if only_lambek_tensors(s):
+                        # L(\)
+                        return (t, t.bottomRight, True, s)
                 
         elif isinstance(self.topRight.hypothesis, OneHypothesis):
             t = self.topRight.hypothesis
             if not t.is_cotensor():
-                s = shortest_path(net, self, t)
-                if only_lambek_tensors(s):
-                    # L(/)
-                    return (t, t.bottomLeft, True, s)
+                if self.topRight is t.bottomRight:
+                    s = shortest_path(net, self, t)
+                    if only_lambek_tensors(s):
+                        # L(/)
+                        return (t, t.bottomLeft, True, s)
         
         return (None, None, None, None)  
 
@@ -721,10 +726,7 @@ class Link(object):
         
     # Meaning whether the atomic formula is 
     # positive (True) or negative (False)
-    # Only callable for mu/comu links
     def positive(self):
-        if self.is_command():
-            return None
         if self.top.main in polarity:
             if polarity[self.top.main] is '+':
                 return True

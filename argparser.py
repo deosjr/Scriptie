@@ -18,7 +18,7 @@ class Parser(object):
         To use LaTeX commands as atoms, use |.
         For example: |phi will be translated to \phi
         Example call: LGprover.py "np/n , n => np"'''),
-                                    usage = 'LGprover.py [options] sequent')
+            usage = 'LGprover.py [options] sequent')
         self.p.add_argument('sequent', metavar='F', type=str, nargs='+',
                        help='a formula in LG to unfold')
         self.p.add_argument('--lexicon', '-l', action = 'store',
@@ -29,6 +29,8 @@ class Parser(object):
                     help = 'hide internal node decoration')
         self.p.add_argument('--main', '-m', 
                     help = 'hide main formula as argument given')
+        self.p.add_argument('--term', action = 'store_true',
+                    help = 'show term(s) accordingly')            
         self.p.add_argument('--rotate', '-r', action = 'store_true', 
                     help = 'rotate structure 90 degrees counterclockwise')
         self.arguments = self.p.parse_args()

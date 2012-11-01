@@ -344,8 +344,7 @@ class Vertex(object):
     # l.bottom.get_term(True)
     def get_term(self, hypo):
         global next_alpha
-        if (self.term, hypo) in tensor_table:
-            (p, _, t) = tensor_table[(self.term,hypo)]
+        if not simple_formula(self.term):
             tensor = None
             if hypo:
                 tensor = self.conclusion
@@ -355,34 +354,8 @@ class Vertex(object):
                 self.term = chr(next_alpha + 96)
                 next_alpha += 1
                 return [self.term]
-            left = ""
-            right = ""
-            if p == 1:
-                if t[0] is 'l':
-                    left = tensor.bottomLeft.get_term(True)
-                if t[0] is 'r':
-                    left = tensor.bottomRight.get_term(True)
-                if t[0] is 't':
-                    left = tensor.top.get_term(False)
-                if t[1] is 'l':
-                    right = tensor.bottomLeft.get_term(True)
-                if t[1] is 'r':
-                    right = tensor.bottomRight.get_term(True)
-                if t[1] is 't':
-                    right = tensor.top.get_term(False)
-            if p == 2:
-                if t[0] is 'l':
-                    left = tensor.topLeft.get_term(False)
-                if t[0] is 'r':
-                    left = tensor.topRight.get_term(False)
-                if t[0] is 'b':
-                    left = tensor.bottom.get_term(True)
-                if t[1] is 'l':
-                    right = tensor.topLeft.get_term(False)
-                if t[1] is 'r':
-                    right = tensor.topRight.get_term(False)
-                if t[1] is 'b':
-                    right = tensor.bottom.get_term(True)
+            left = tensor.left.get_term(tensor.left.hypothesis is tensor)
+            right = tensor.right.get_term(tensor.right.hypothesis is tensor)
             if not simple_formula("".join(left)):
                 left = ['('] + left + [')']
             if not simple_formula("".join(right)):
@@ -410,6 +383,8 @@ class Vertex(object):
         else:
             t = (TwoHypotheses(left, right, geometry, vertex, structure, hypo, i))
         t.term = term_geo
+        t.set_left_and_right()
+        t.calculate_polarity()
         structure.add_link(link)
                                     
                                
@@ -542,13 +517,17 @@ class OneHypothesis(Tensor):
         
     def replace(self, replace, vertex):
         global vertices, removed
+        if self.left is replace:
+            self.left = vertex
+        if self.right is replace:
+            self.tight = vertex
         if self.is_cotensor() and self.arrow == replace.alpha:
             self.arrow = vertex.alpha
-        if self.top == replace:
+        if self.top is replace:
             self.top = vertex
-        elif self.bottomLeft == replace:
+        elif self.bottomLeft is replace:
             self.bottomLeft = vertex
-        elif self.bottomRight == replace:
+        elif self.bottomRight is replace:
             self.bottomRight = vertex
         del vertices[replace.alpha]
         removed += 1
@@ -582,22 +561,28 @@ class OneHypothesis(Tensor):
         
     def get_term(self):
         if isinstance(self.term, str):
-            t1 = None
-            t2 = None
-            if self.term[0] is 'l':
-                t1 = self.bottomLeft.term
-            if self.term[0] is 'r':
-                t1 = self.bottomRight.term
-            if self.term[0] is 't':
-                t1 = self.top.term
-            if self.term[1] is 'l':
-                t2 = self.bottomLeft.term
-            if self.term[1] is 'r':
-                t2 = self.bottomRight.term
-            if self.term[1] is 't':
-                t2 = self.top.term
+            t1 = self.left.term
+            t2 = self.right.term
             self.term = ['\\frac{'] + [t1] + [t2] + ['}{'] + [self.main.term] + ['}']
         return self.term
+        
+    def set_left_and_right(self):
+        if self.term[0] is 'l':
+            self.left = self.bottomLeft
+        if self.term[0] is 'r':
+            self.left = self.bottomRight
+        if self.term[0] is 't':
+            self.left = self.top
+        if self.term[1] is 'l':
+            self.right = self.bottomLeft
+        if self.term[1] is 'r':
+            self.right = self.bottomRight
+        if self.term[1] is 't':
+            self.right = self.top
+        
+    def calculate_polarity(self):
+        print self.term
+        print self.main.term
         
     
 class TwoHypotheses(Tensor):
@@ -635,13 +620,17 @@ class TwoHypotheses(Tensor):
       
     def replace(self, replace, vertex):
         global vertices, removed
+        if self.left is replace:
+            self.left = vertex
+        if self.right is replace:
+            self.tight = vertex
         if self.is_cotensor() and self.arrow == replace.alpha:
             self.arrow = vertex.alpha
-        if self.topLeft == replace:
+        if self.topLeft is replace:
             self.topLeft = vertex
-        elif self.topRight == replace:
+        elif self.topRight is replace:
             self.topRight = vertex
-        elif self.bottom == replace:
+        elif self.bottom is replace:
             self.bottom = vertex
         del vertices[replace.alpha]
         removed += 1
@@ -675,22 +664,28 @@ class TwoHypotheses(Tensor):
 
     def get_term(self):
         if isinstance(self.term, str):
-            t1 = None
-            t2 = None
-            if self.term[0] is 'l':
-                t1 = self.topLeft.term
-            if self.term[0] is 'r':
-                t1 = self.topRight.term
-            if self.term[0] is 'b':
-                t1 = self.bottom.term
-            if self.term[1] is 'l':
-                t2 = self.topLeft.term
-            if self.term[1] is 'r':
-                t2 = self.topRight.term
-            if self.term[1] is 'b':
-                t2 = self.bottom.term
+            t1 = self.left.term
+            t2 = self.right.term
             self.term = ['\\frac{'] + [t1] + [t2] + ['}{'] + [self.main.term] + ['}']
         return self.term
+        
+    def set_left_and_right(self):
+        if self.term[0] is 'l':
+            self.left = self.topLeft
+        if self.term[0] is 'r':
+            self.left = self.topRight
+        if self.term[0] is 'b':
+            self.left = self.bottom
+        if self.term[1] is 'l':
+            self.right = self.topLeft
+        if self.term[1] is 'r':
+            self.right = self.topRight
+        if self.term[1] is 'b':
+            self.right = self.bottom
+        
+    def calculate_polarity(self):
+        print self.term
+        print self.main.term
         
         
 class Link(object):

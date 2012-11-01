@@ -281,52 +281,81 @@ def main():
             
             matchings = []
             
-            # For each cotensor, find the tensor(s) its connected to directly
-            # Cotensors[index] = [cotensor, component1, component2]
-            # if connection is a link then the whole link is passed
-            cotensors = {}
-            for i,co in enumerate([x for x in composition_graph.tensors if x.is_cotensor()]):
-                [t1, t2] = co.non_main_connections()
-                i1 = t1
-                i2 = t2
-                for c in components:
-                    if t1 in c:
-                        i1 = components.index(c)
-                    if t2 in c:
-                        i2 = components.index(c)
-                cotensors[i] = [co, i1, i2]
-               
-            for p in list(itertools.permutations(mu_binders)):
-                matching = []
-                substitution = {}
-                added_cotensors = []
-                for m in p:
-                    origin = None
-                    replacement = None
-                    if mu_comu[m[0]].positive():
-                        origin = m[2]
-                        replacement = m[1]
-                    else:
-                        origin = m[1]
-                        replacement = m[2]
-                    if origin in substitution:
-                        origin = substitution[origin]
-                    if replacement in substitution:
-                        replacement = substitution[replacement]
-                    substitution[origin] = replacement
-                    for k,v in substitution.items():
-                        if v == origin:
-                            substitution[k] = replacement 
+            if command:
+            
+                # For each cotensor, find the tensor(s) its connected to directly
+                # Cotensors[index] = [cotensor, component1, component2]
+                # if connection is a link then the whole link is passed
+                cotensors = {}
+                for i,co in enumerate([x for x in composition_graph.tensors if x.is_cotensor()]):
+                    [t1, t2] = co.non_main_connections()
+                    i1 = t1
+                    i2 = t2
+                    for c in components:
+                        if t1 in c:
+                            i1 = components.index(c)
+                        if t2 in c:
+                            i2 = components.index(c)
+                    cotensors[i] = [co, i1, i2]
+                   
+                for p in list(itertools.permutations(mu_binders)):
+                    matching = []
+                    substitution = {}
+                    added_cotensors = []
+                    for m in p:
+                        origin = None
+                        replacement = None
+                        if mu_comu[m[0]].positive():
+                            origin = m[2]
+                            replacement = m[1]
+                        else:
+                            origin = m[1]
+                            replacement = m[2]
+                        if origin in substitution:
+                            origin = substitution[origin]
+                        if replacement in substitution:
+                            replacement = substitution[replacement]
+                        substitution[origin] = replacement
+                        for k,v in substitution.items():
+                            if v == origin:
+                                substitution[k] = replacement 
+                        
+                        cotensor_actions = []
+                        for k,v in cotensors.items():  
+                            if k not in added_cotensors:
+                                if mu_comu[m[0]] in v:
+                                    # Obviously TODO
+                                    print "Not a clue what to do"
+                                if command[origin] in v:
+                                    index = v.index(command[origin])
+                                    v[index] = origin
+                                    cotensors[k] = v
+                                if v[1] in substitution:
+                                    v[1] = substitution[v[1]]
+                                if v[2] in substitution:
+                                    v[2] = substitution[v[2]]
+                                if v[1] == v[2]:
+                                    cotensor_actions.append(v[0])
+                                    added_cotensors.append(k)
+                        
+                        matching.append(origin)
+                        matching.extend(cotensor_actions)
+                        matching.append(m[0])
+                      
+                    odd_origin = odd_mu_out[1]
+                    if odd_origin in substitution:
+                        odd_origin = substitution[odd_origin]
+                    matching.append(odd_origin)
                     
                     cotensor_actions = []
                     for k,v in cotensors.items():  
                         if k not in added_cotensors:
-                            if mu_comu[m[0]] in v:
+                            if mu_comu[odd_mu_out[0]] in v:
                                 # Obviously TODO
                                 print "Not a clue what to do"
-                            if command[origin] in v:
-                                index = v.index(command[origin])
-                                v[index] = origin
+                            if command[odd_origin] in v:
+                                index = v.index(command[odd_origin])
+                                v[index] = odd_origin
                                 cotensors[k] = v
                             if v[1] in substitution:
                                 v[1] = substitution[v[1]]
@@ -334,38 +363,11 @@ def main():
                                 v[2] = substitution[v[2]]
                             if v[1] == v[2]:
                                 cotensor_actions.append(v[0])
-                                added_cotensors.append(k)
-                    
-                    matching.append(origin)
                     matching.extend(cotensor_actions)
-                    matching.append(m[0])
-                  
-                odd_origin = odd_mu_out[1]
-                if odd_origin in substitution:
-                    odd_origin = substitution[odd_origin]
-                matching.append(odd_origin)
-                
-                cotensor_actions = []
-                for k,v in cotensors.items():  
-                    if k not in added_cotensors:
-                        if mu_comu[odd_mu_out[0]] in v:
-                            # Obviously TODO
-                            print "Not a clue what to do"
-                        if command[odd_origin] in v:
-                            index = v.index(command[odd_origin])
-                            v[index] = odd_origin
-                            cotensors[k] = v
-                        if v[1] in substitution:
-                            v[1] = substitution[v[1]]
-                        if v[2] in substitution:
-                            v[2] = substitution[v[2]]
-                        if v[1] == v[2]:
-                            cotensor_actions.append(v[0])
-                matching.extend(cotensor_actions)
-                
-                matching.append(odd_mu_out[0])
-                
-                matchings.append(matching)     
+                    
+                    matching.append(odd_mu_out[0])
+                    
+                    matchings.append(matching)     
                 
             # Step 2: Calculate term in order of matching
             
@@ -373,7 +375,11 @@ def main():
             f.write("{\\scalefont{0.7}\n")
             f.write("\\begin{tikzpicture}\n")
             f.write("\\node [mybox] (box){\n")
-            f.write("\\begin{minipage}{0.50\\textwidth}\n")
+            f.write("\\begin{minipage}{0.70\\textwidth}\n")
+            f.write("\\begin{center}\n")
+            
+            if not matchings:
+                f.write('$' + operators_to_TeX(composition_graph.main.hypothesis) + '$')
             
             for m in matchings:
                 
@@ -437,8 +443,10 @@ def main():
                     else:
                         f.write(x)
                     f.write(" ")
-                f.write("$\n\n")  
+                f.write("$\n\n")
+                f.write("\\vspace{5mm}\n")
             
+            f.write("\end{center}\n")
             f.write("\end{minipage}\n\n};\n")
             f.write("\end{tikzpicture}}\n")
             f.close()

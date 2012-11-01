@@ -6,6 +6,7 @@
 
 # Polarity for atomic formulas
 # Given in a different format
+# Default is negative
 
 np = +
 n = +

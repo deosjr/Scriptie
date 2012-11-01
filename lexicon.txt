@@ -18,6 +18,13 @@ slaapt :: np\s
 
 test :: s*s
 
+a = +
+b = +
+c1 :: a/b
+c2 :: (a(/)s)(\)b
+
+delta :: U\((U(/)(B\U))(\)U)
+
 # Double entries don't raise errors but are not considered (yet)
 man :: x
 

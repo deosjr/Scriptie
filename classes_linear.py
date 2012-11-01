@@ -384,7 +384,8 @@ class Vertex(object):
             t = (TwoHypotheses(left, right, geometry, vertex, structure, hypo, i))
         t.term = term_geo
         t.set_left_and_right()
-        t.calculate_polarity()
+        #t.calculate_polarity(connective)
+        #self.polarity = vertex.polarity
         structure.add_link(link)
                                     
                                
@@ -438,12 +439,16 @@ class Tensor(object):
         return vertex
         
     def eval_formula(self, part, hypo, is_value):
-        global next_alpha
+        global next_alpha, polarity
         if simple_formula(part):
             atom = Vertex(part, hypo)
             self.structure.add_atom(atom, not hypo)
             atom.term = chr(next_alpha + 96)
             next_alpha += 1
+            if part in polarity:
+                atom.polarity = polarity[part]
+            else:
+                atom.polarity = '-'
             return self.attach(atom, hypo, is_value, False)
         else:
             vertex = Vertex() 
@@ -480,6 +485,12 @@ class Tensor(object):
                 if isinstance(c.conclusion, Tensor) or isinstance(c.conclusion, Link):
                     n.append(c.conclusion)
         return n
+        
+    def calculate_polarity(self, connective):
+        # TODO
+        #a = self.left.polarity
+        #b = self.right.polarity
+        print "TODO"
             
   
 class OneHypothesis(Tensor):
@@ -580,10 +591,6 @@ class OneHypothesis(Tensor):
         if self.term[1] is 't':
             self.right = self.top
         
-    def calculate_polarity(self):
-        print self.term
-        print self.main.term
-        
     
 class TwoHypotheses(Tensor):
 
@@ -683,10 +690,6 @@ class TwoHypotheses(Tensor):
         if self.term[1] is 'b':
             self.right = self.bottom
         
-    def calculate_polarity(self):
-        print self.term
-        print self.main.term
-        
         
 class Link(object):
     
@@ -722,8 +725,9 @@ class Link(object):
     # Meaning whether the atomic formula is 
     # positive (True) or negative (False)
     def positive(self):
-        if self.top.main in polarity:
-            if polarity[self.top.main] is '+':
+        # TODO: remove this failsafe for complex formulas
+        if hasattr(self.top, 'polarity'):
+            if self.top.polarity is '+':
                 return True
         return False
         

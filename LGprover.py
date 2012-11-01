@@ -217,12 +217,7 @@ def main():
         proof_net.contract()
         
         # If there are cotensors left, this is not a solution
-        cotensor_left = False
-        for t in proof_net.tensors:
-            if t.is_cotensor():
-                cotensor_left = True
-                break
-        if cotensor_left:
+        if [x for x in proof_net.tensors if x.is_cotensor()]:
             continue          
         
         # Check: Connectedness of the whole structure
@@ -268,10 +263,14 @@ def main():
                     for c in components:
                         if l.top.hypothesis in c:
                             t = components.index(c)
+                    if t is None:   # t is a cotensor
+                        t = l.top.hypothesis
                 if isinstance(l.bottom.conclusion, classes.Tensor):
                     for c_ in components:
                         if l.bottom.conclusion in c_:
                             b = components.index(c_)
+                    if b is None:   # b is a cotensor
+                        b = l.bottom.conclusion
                 if t is not None and b is not None:
                     mu_binders.append((mu_comu.index(l),t,b))
                 if t is None:
@@ -297,7 +296,7 @@ def main():
                         if t2 in c:
                             i2 = components.index(c)
                     cotensors[i] = [co, i1, i2]
-                   
+                
                 for p in list(itertools.permutations(mu_binders)):
                     matching = []
                     substitution = {}
@@ -315,11 +314,7 @@ def main():
                             origin = substitution[origin]
                         if replacement in substitution:
                             replacement = substitution[replacement]
-                        substitution[origin] = replacement
-                        for k,v in substitution.items():
-                            if v == origin:
-                                substitution[k] = replacement 
-                        
+                                                
                         cotensor_actions = []
                         for k,v in cotensors.items():  
                             if k not in added_cotensors:
@@ -337,6 +332,11 @@ def main():
                                 if v[1] == v[2]:
                                     cotensor_actions.append(v[0])
                                     added_cotensors.append(k)
+                        
+                        substitution[origin] = replacement
+                        for k,v in substitution.items():
+                            if v == origin:
+                                substitution[k] = replacement 
                         
                         matching.append(origin)
                         matching.extend(cotensor_actions)
@@ -392,7 +392,7 @@ def main():
                     left = comlink.top.get_term(False)
                     right = comlink.bottom.get_term(True)
                     harpoon = ['|`']
-                    if comlink.positive:
+                    if comlink.positive():
                         harpoon = ['/|']
                     for x in subs:
                         if x in right:
@@ -402,7 +402,7 @@ def main():
                             break   # Because more than one substitution is not possible, right?
                     term = ['<'] + left + harpoon + right + ['>']
                     
-                    # TODO: (Possible) Cotensor(s)
+                    # (Possible) Cotensor(s)
                     while isinstance(m[0], classes.Tensor):
                         term = m.pop(0).get_term() + ['.'] + term
                     

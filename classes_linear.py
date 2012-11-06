@@ -373,6 +373,8 @@ class Vertex(object):
         if i is not None:
             self.term = connective
         vertex.term = connective
+        self.polarity = con_pol(connective)
+        vertex.polarity = self.polarity
         if hypo:
             link = Link(self.alpha,vertex.alpha)
         else:
@@ -384,8 +386,6 @@ class Vertex(object):
             t = (TwoHypotheses(left, right, geometry, vertex, structure, hypo, i))
         t.term = term_geo
         t.set_left_and_right()
-        #t.calculate_polarity(connective)
-        #self.polarity = vertex.polarity
         structure.add_link(link)
                                     
                                
@@ -485,12 +485,6 @@ class Tensor(object):
                 if isinstance(c.conclusion, Tensor) or isinstance(c.conclusion, Link):
                     n.append(c.conclusion)
         return n
-        
-    def calculate_polarity(self, connective):
-        # TODO
-        #a = self.left.polarity
-        #b = self.right.polarity
-        print "TODO"
             
   
 class OneHypothesis(Tensor):
@@ -725,10 +719,8 @@ class Link(object):
     # Meaning whether the atomic formula is 
     # positive (True) or negative (False)
     def positive(self):
-        # TODO: remove this failsafe for complex formulas
-        if hasattr(self.top, 'polarity'):
-            if self.top.polarity is '+':
-                return True
+        if self.top.polarity is '+':
+            return True
         return False
         
     def draw_line(self):

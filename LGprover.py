@@ -95,6 +95,12 @@ def create_composition_graph(sequent, raw, possible_binding):
     command = shuffled
     
     return composition_graph, components, command, mu_comu
+    
+    
+def substitute(dict, x):
+    if x in dict:
+        return dict[x]
+    return x
 
     
 def main():
@@ -299,7 +305,7 @@ def main():
                 
                 for p in list(itertools.permutations(mu_binders)):
                     matching = []
-                    substitution = {}
+                    s = {}
                     added_cotensors = []
                     for m in p:
                         origin = None
@@ -310,10 +316,10 @@ def main():
                         else:
                             origin = m[1]
                             replacement = m[2]
-                        if origin in substitution:
-                            origin = substitution[origin]
-                        if replacement in substitution:
-                            replacement = substitution[replacement]
+                        origin = substitute(s, origin)
+                        replacement = substitute(s, replacement)
+                        
+                        matching.append(origin)
                                                 
                         cotensor_actions = []
                         for k,v in cotensors.items():  
@@ -325,26 +331,25 @@ def main():
                                     index = v.index(command[origin])
                                     v[index] = origin
                                     cotensors[k] = v
-                                if v[1] in substitution:
-                                    v[1] = substitution[v[1]]
-                                if v[2] in substitution:
-                                    v[2] = substitution[v[2]]
+                                v[1] = substitute(s, v[1])
+                                v[2] = substitute(s, v[2])
                                 if v[1] == v[2]:
                                     cotensor_actions.append(v[0])
                                     added_cotensors.append(k)
-                        
-                        substitution[origin] = replacement
-                        for k,v in substitution.items():
-                            if v == origin:
-                                substitution[k] = replacement 
-                        
-                        matching.append(origin)
+                                    s[v[0]] = replacement
+                                    
                         matching.extend(cotensor_actions)
+                        
+                        s[origin] = replacement
+                        s[command[origin]] = replacement
+                        for k,v in s.items():
+                            if v == origin:
+                                s[k] = replacement 
+                        
                         matching.append(m[0])
-                      
+                        
                     odd_origin = odd_mu_out[1]
-                    if odd_origin in substitution:
-                        odd_origin = substitution[odd_origin]
+                    odd_origin = substitute(s, odd_origin)
                     matching.append(odd_origin)
                     
                     cotensor_actions = []
@@ -357,10 +362,8 @@ def main():
                                 index = v.index(command[odd_origin])
                                 v[index] = odd_origin
                                 cotensors[k] = v
-                            if v[1] in substitution:
-                                v[1] = substitution[v[1]]
-                            if v[2] in substitution:
-                                v[2] = substitution[v[2]]
+                            v[1] = substitute(s, v[1])
+                            v[2] = substitute(s, v[2])
                             if v[1] == v[2]:
                                 cotensor_actions.append(v[0])
                     matching.extend(cotensor_actions)
@@ -391,9 +394,9 @@ def main():
                     comlink = command[m.pop(0)]
                     left = comlink.top.get_term(False)
                     right = comlink.bottom.get_term(True)
-                    harpoon = ['|`']
+                    harpoon = ['/|']
                     if comlink.positive():
-                        harpoon = ['/|']
+                        harpoon = ['|`']
                     for x in subs:
                         if x in right:
                             insertion = ['('] + term + [')']

@@ -116,5 +116,17 @@ tensor_table = {
     ("(*)",0):(2,"lrf<eee","lr"),
     ("(\\)",0):(1,"rlfvev","lt")        
 }
+
+
+def con_pol(connective):
+    c = {
+    "/":'-',
+    "*":'+',
+    "\\":'-',
+    "(/)":'+',
+    "(*)":'-',
+    "(\\)":'+'
+    }
+    return c[connective]
     
     

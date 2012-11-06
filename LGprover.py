@@ -16,6 +16,7 @@ from helper_functions import *
 import classes_linear as classes
 import argparser
 from table import Table
+import graph as g
 
 import os, sys
 import platform
@@ -96,12 +97,6 @@ def create_composition_graph(sequent, raw, possible_binding):
     
     return composition_graph, components, command, mu_comu
     
-    
-def substitute(dict, x):
-    if x in dict:
-        return dict[x]
-    return x
-
     
 def main():
 
@@ -248,131 +243,18 @@ def main():
         
             composition_graph, components, command, mu_comu = create_composition_graph(sequent, raw_sequent, possible_bindings[i])
             
-            # A simple version using as an example 
-            # subj, tv, det, noun => s
-            
             # Step 1: create matchings
-            # TODO: Working assumptions: 
-            # For every component there is a command and a mu/comu link
-            # and there are n-1 mu/comu links between components
-            # where n is the number of components.
-            # Also, every command is connected to a different component
-            # and nothing else.
-
-            # Find all mu/comu links between 2 components
-            mu_binders = []
-            odd_mu_out = None
-            for l in mu_comu:
-                t = None
-                b = None
-                if isinstance(l.top.hypothesis, classes.Tensor):
-                    for c in components:
-                        if l.top.hypothesis in c:
-                            t = components.index(c)
-                    if t is None:   # t is a cotensor
-                        t = l.top.hypothesis
-                if isinstance(l.bottom.conclusion, classes.Tensor):
-                    for c_ in components:
-                        if l.bottom.conclusion in c_:
-                            b = components.index(c_)
-                    if b is None:   # b is a cotensor
-                        b = l.bottom.conclusion
-                if t is not None and b is not None:
-                    mu_binders.append((mu_comu.index(l),t,b))
-                if t is None:
-                    odd_mu_out = (mu_comu.index(l),b)
-                if b is None:
-                    odd_mu_out = (mu_comu.index(l),t)
+            # TODO: Working assumptions (see graph.py)
             
-            matchings = []
-            
-            if command:
-            
-                # For each cotensor, find the tensor(s) its connected to directly
-                # Cotensors[index] = [cotensor, component1, component2]
-                # if connection is a link then the whole link is passed
-                cotensors = {}
-                for i,co in enumerate([x for x in composition_graph.tensors if x.is_cotensor()]):
-                    [t1, t2] = co.non_main_connections()
-                    i1 = t1
-                    i2 = t2
-                    for c in components:
-                        if t1 in c:
-                            i1 = components.index(c)
-                        if t2 in c:
-                            i2 = components.index(c)
-                    cotensors[i] = [co, i1, i2]
-                
-                for p in list(itertools.permutations(mu_binders)):
-                    matching = []
-                    s = {}
-                    added_cotensors = []
-                    for m in p:
-                        origin = None
-                        replacement = None
-                        if mu_comu[m[0]].positive():
-                            origin = m[2]
-                            replacement = m[1]
-                        else:
-                            origin = m[1]
-                            replacement = m[2]
-                        origin = substitute(s, origin)
-                        replacement = substitute(s, replacement)
-                        
-                        matching.append(origin)
-                                                
-                        cotensor_actions = []
-                        for k,v in cotensors.items():  
-                            if k not in added_cotensors:
-                                if mu_comu[m[0]] in v:
-                                    # Obviously TODO
-                                    print "Not a clue what to do"
-                                if command[origin] in v:
-                                    index = v.index(command[origin])
-                                    v[index] = origin
-                                    cotensors[k] = v
-                                v[1] = substitute(s, v[1])
-                                v[2] = substitute(s, v[2])
-                                if v[1] == v[2]:
-                                    cotensor_actions.append(v[0])
-                                    added_cotensors.append(k)
-                                    s[v[0]] = replacement
-                                    
-                        matching.extend(cotensor_actions)
-                        
-                        s[origin] = replacement
-                        s[command[origin]] = replacement
-                        for k,v in s.items():
-                            if v == origin:
-                                s[k] = replacement 
-                        
-                        matching.append(m[0])
-                        
-                    odd_origin = odd_mu_out[1]
-                    odd_origin = substitute(s, odd_origin)
-                    matching.append(odd_origin)
-                    
-                    cotensor_actions = []
-                    for k,v in cotensors.items():  
-                        if k not in added_cotensors:
-                            if mu_comu[odd_mu_out[0]] in v:
-                                # Obviously TODO
-                                print "Not a clue what to do"
-                            if command[odd_origin] in v:
-                                index = v.index(command[odd_origin])
-                                v[index] = odd_origin
-                                cotensors[k] = v
-                            v[1] = substitute(s, v[1])
-                            v[2] = substitute(s, v[2])
-                            if v[1] == v[2]:
-                                cotensor_actions.append(v[0])
-                    matching.extend(cotensor_actions)
-                    
-                    matching.append(odd_mu_out[0])
-                    
-                    matchings.append(matching)     
+            # Create traversal graph
+            cotensors = [x for x in composition_graph.tensors if x.is_cotensor()]
+            graph = g.Graph(components, cotensors, mu_comu, command)              
                 
             # Step 2: Calculate term in order of matching
+            # Working Assumption 3 -> only 1 match
+            matching = [graph.match()]
+            
+            # Step 3: Write to TeX
             
             f = open('formula.tex', 'a')
             f.write("{\\scalefont{0.7}\n")
@@ -381,28 +263,35 @@ def main():
             f.write("\\begin{minipage}{0.70\\textwidth}\n")
             f.write("\\begin{center}\n")
             
-            if not matchings:
+            if not matching:
                 f.write('$' + operators_to_TeX(composition_graph.main.hypothesis) + '$')
             
-            for m in matchings:
+            for m in matching:
                 
                 term = []
                 subs = []
                 
                 while m:
                     # Command
-                    comlink = command[m.pop(0)]
+                    comlink = m.pop(0)
                     left = comlink.top.get_term(False)
                     right = comlink.bottom.get_term(True)
                     harpoon = ['/|']
                     if comlink.positive():
                         harpoon = ['|`']
-                    for x in subs:
-                        if x in right:
-                            insertion = ['('] + term + [')']
-                            index = right.index(x)
-                            right = right[:index] + insertion + right[index+1:]
-                            break   # Because more than one substitution is not possible, right?
+                        for x in subs:
+                            if x in left:
+                                insertion = ['('] + term + [')']
+                                index = left.index(x)
+                                left = left[:index] + insertion + left[index+1:]
+                                break   # Because more than one substitution is not possible, right?
+                    else:
+                        for x in subs:
+                            if x in right:
+                                insertion = ['('] + term + [')']
+                                index = right.index(x)
+                                right = right[:index] + insertion + right[index+1:]
+                                break   # Because more than one substitution is not possible, right?
                     term = ['<'] + left + harpoon + right + ['>']
                     
                     # (Possible) Cotensor(s)
@@ -410,7 +299,7 @@ def main():
                         term = m.pop(0).get_term() + ['.'] + term
                     
                     # Mu / Comu
-                    mulink = mu_comu[m.pop(0)]
+                    mulink = m.pop(0)
                     mu = []
                     source = None
                     target = None
@@ -423,7 +312,7 @@ def main():
                         source = mulink.top.get_term(False)
                         target = mulink.bottom.get_term(True)
                         
-                    term = mu + source + ['.'] + term   
+                    term = mu + source + ['.'] + term  
                     subs.append(target[0])  
 
                 f.write("$")

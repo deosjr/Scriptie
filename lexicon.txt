@@ -17,6 +17,7 @@ man :: n
 slaapt :: np\s
 
 test :: s*s
+test2 :: (a/b)*(b\a)
 
 a = +
 b = +

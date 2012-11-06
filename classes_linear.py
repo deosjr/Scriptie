@@ -72,6 +72,7 @@ class ProofStructure(object):
                 (complement, c_main, t_top, s) = t.contractions(self)
                 
                 if complement is not None:
+                    
                     # Simple contraction, L* and R(*)
                     link = None
                     if not s:
@@ -553,7 +554,7 @@ class OneHypothesis(Tensor):
                         #R\   
                         return (t, t.topRight, False, s)
                 
-        elif isinstance(self.bottomRight.conclusion, TwoHypotheses):
+        if isinstance(self.bottomRight.conclusion, TwoHypotheses):
             t = self.bottomRight.conclusion
             if not t.is_cotensor():
                 if self.bottomRight is t.topRight:
@@ -652,7 +653,7 @@ class TwoHypotheses(Tensor):
                         # L(\)
                         return (t, t.bottomRight, True, s)
                 
-        elif isinstance(self.topRight.hypothesis, OneHypothesis):
+        if isinstance(self.topRight.hypothesis, OneHypothesis):
             t = self.topRight.hypothesis
             if not t.is_cotensor():
                 if self.topRight is t.bottomRight:

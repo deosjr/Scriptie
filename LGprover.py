@@ -83,6 +83,7 @@ def create_composition_graph(sequent, raw, possible_binding):
     mu_comu = [l for l in composition_graph.links if not l.is_command()]
     
     # Arranging commands to index of components
+    # Working Assumption 2
     shuffled = [0 for x in command]
     for l in command:
         if isinstance(l.top.hypothesis, classes.Tensor):
@@ -219,6 +220,7 @@ def main():
         
         # If there are cotensors left, this is not a solution
         if [x for x in proof_net.tensors if x.is_cotensor()]:
+            print "not a solution"
             continue          
         
         # Check: Connectedness of the whole structure

@@ -46,7 +46,7 @@ class Graph(object):
         self.command_edges[i] = command_edge
 
     def get_starting_point(self):
-        starting_points = [x for x in self.component_nodes if x.outgoing_mu_comu]
+        starting_points = [x for x in self.component_nodes if x.get_outgoing()]
         if starting_points:
             # Working Assumption 3
             return starting_points[0]
@@ -54,39 +54,48 @@ class Graph(object):
         
     def match(self):
         match = []
+        subs = {}
         
         comp = self.get_starting_point()
         
         while [x for x in self.mu_comu_edges if not x.visited]:
-        
+            
+            comm = comp.command
+            if comp.visited:
+                comm = subs[comp].command
+            
             comp.visited = True
-            match.append(comp.command.command)
-            comp.command.visited = True
+            match.append(comm.command)
+            comm.visited = True
             
             for c in [x for x in self.cotensor_nodes if not x.visited]:
                 if c.attachable():
                     match.append(c.cotensor)
                     c.visited = True
-               
-            if comp.outgoing_mu_comu:
+            
+            m = None
+            if comp.get_outgoing():
                 # Working Assumption 3
-                m = comp.outgoing_mu_comu[0]
+                m = comp.get_outgoing()[0]
+                subs[comp] = m.destination
             else:
-                leftover_mu = [x for x in self.mu_comu_edges if not x.visited]
+                leftover_mu = [x for x in self.mu_comu_edges if x.origin.visited and not x.visited]
                 # Working Assumption 3
                 m = leftover_mu[0]
-               
+             
+            if m is None:
+                break
+             
             match.append(m.mu_comu)
             m.visited = True
             
-            if isinstance(m.destination, Component):
-                comp = m.destination
-            else:
+            comp = self.get_starting_point()
+            if not comp:
                 leftover_comp = [x for x in self.component_nodes if not x.visited]
                 if leftover_comp:
                     # Working Assumption 3
                     comp = leftover_comp[0]
-            
+        
         return match
         
   
@@ -110,6 +119,9 @@ class Component(Node):
         
     def add_outgoing_mu_comu(self, m):
         self.outgoing_mu_comu.append(m)
+        
+    def get_outgoing(self):
+        return [x for x in self.outgoing_mu_comu if not x.visited]
     
 
 class Cotensor(Node):
@@ -206,7 +218,7 @@ class Mu_Comu(Edge):
         self.visited = False
         
         # Working assumption 1
-        if isinstance(self.origin, Component):
+        if isinstance(self.origin, Component) and isinstance(self.destination, Component):
             self.origin.add_outgoing_mu_comu(self)
     
 class Command(Edge):

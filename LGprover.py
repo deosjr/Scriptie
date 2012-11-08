@@ -265,10 +265,10 @@ def main():
             f.write("\\begin{minipage}{0.70\\textwidth}\n")
             f.write("\\begin{center}\n")
             
-            if not matching:
+            if not [x for x in matching if not x == []]:
                 f.write('$' + operators_to_TeX(composition_graph.main.hypothesis) + '$')
             
-            for m in matching:
+            for m in [x for x in matching if not x == []]:
                 
                 term = []
                 subs = []

@@ -56,15 +56,26 @@ class Graph(object):
         match = []
         subs = {}
         
-        comp = self.get_starting_point()
-        
         while [x for x in self.mu_comu_edges if not x.visited]:
+            
+            comp = self.get_starting_point()
+            if not comp:
+                leftover_comp = [x for x in self.component_nodes if not x.visited]
+                if leftover_comp:
+                    # Working Assumption 3
+                    comp = leftover_comp[0]
             
             comm = comp.command
             if comp.visited:
                 comm = subs[comp].command
             
             comp.visited = True
+            
+            if comm.visited:
+                match = []
+                print 'command visited'
+                break
+            
             match.append(comm.command)
             comm.visited = True
             
@@ -79,23 +90,20 @@ class Graph(object):
                 m = comp.get_outgoing()[0]
                 subs[comp] = m.destination
             else:
-                leftover_mu = [x for x in self.mu_comu_edges if x.origin.visited and not x.visited]
-                # Working Assumption 3
-                m = leftover_mu[0]
+                leftover_mu = [x for x in self.mu_comu_edges if not x.visited]
+                leftover_mu = [x for x in leftover_mu if (isinstance(x.origin, Node) and x.origin.visited) or (isinstance(x.destination, Node) and x.destination.visited)]
+                if leftover_mu:
+                    # Working Assumption 3
+                    m = leftover_mu[0]
              
             if m is None:
+                match = []
+                print 'no mu available'
                 break
              
             match.append(m.mu_comu)
             m.visited = True
             
-            comp = self.get_starting_point()
-            if not comp:
-                leftover_comp = [x for x in self.component_nodes if not x.visited]
-                if leftover_comp:
-                    # Working Assumption 3
-                    comp = leftover_comp[0]
-        
         return match
         
   

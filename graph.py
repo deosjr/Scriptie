@@ -1,7 +1,6 @@
 # Working assumptions : 
 # 1 - All components are connected by mu/comu-links
 # 2 - All components have a single command link attached
-# 3 - We only compute one term (so 1 starting point, one outgoing mu, deterministic)
 
 import classes_linear as classes
 
@@ -45,66 +44,85 @@ class Graph(object):
         command_edge = Command(self, c, i)
         self.command_edges[i] = command_edge
 
-    def get_starting_point(self):
-        starting_points = [x for x in self.component_nodes if x.get_outgoing()]
-        if starting_points:
-            # Working Assumption 3
-            return starting_points[0]
-        return []
+    def get_starting_point(self, mu_vis):
+        return [x for x in self.component_nodes if x.get_outgoing(mu_vis)]
         
     def match(self):
-        match = []
-        subs = {}
+        return self.recursive_match([],{},[],[],[],[])
+    
+    def recursive_match(self, match, subs, comp_vis, cot_vis, comm_vis, mu_vis):
         
-        while [x for x in self.mu_comu_edges if not x.visited]:
+        if [x for x in self.mu_comu_edges if not x in mu_vis]:
             
-            comp = self.get_starting_point()
+            comp = self.get_starting_point(mu_vis)
             if not comp:
-                leftover_comp = [x for x in self.component_nodes if not x.visited]
-                if leftover_comp:
-                    # Working Assumption 3
-                    comp = leftover_comp[0]
+                comp = [x for x in self.component_nodes if not x in comp_vis]
             
-            comm = comp.command
-            if comp.visited:
-                comm = subs[comp].command
+            temp_match = []
             
-            comp.visited = True
+            for c in comp:
+                y = self.match_body(c, match, subs, comp_vis, cot_vis, comm_vis, mu_vis)
+                if y:
+                    temp_match.extend(y)
+            return temp_match
+        return [match]
             
-            if comm.visited:
-                match = []
-                print 'command visited'
-                break
-            
-            match.append(comm.command)
-            comm.visited = True
-            
-            for c in [x for x in self.cotensor_nodes if not x.visited]:
-                if c.attachable():
-                    match.append(c.cotensor)
-                    c.visited = True
-            
-            m = None
-            if comp.get_outgoing():
-                # Working Assumption 3
-                m = comp.get_outgoing()[0]
-                subs[comp] = m.destination
-            else:
-                leftover_mu = [x for x in self.mu_comu_edges if not x.visited]
-                leftover_mu = [x for x in leftover_mu if (isinstance(x.origin, Node) and x.origin.visited) or (isinstance(x.destination, Node) and x.destination.visited)]
-                if leftover_mu:
-                    # Working Assumption 3
-                    m = leftover_mu[0]
-             
-            if m is None:
-                match = []
-                print 'no mu available'
-                break
-             
-            match.append(m.mu_comu)
-            m.visited = True
-            
-        return match
+    def match_body(self, comp, match, subs, comp_vis, cot_vis, comm_vis, mu_vis):
+        
+        c_match = [x for x in match]
+        compvis = [x for x in comp_vis]
+        cotvis = [x for x in cot_vis]
+        commvis = [x for x in comm_vis]
+        muvis = [x for x in mu_vis]
+        
+        comm = comp.command
+        if comp in compvis:
+            comm = subs[comp].command
+            compvis.append(subs[comp])
+        else:
+            compvis.append(comp)
+        
+        if comm in commvis:
+            return []
+        
+        c_match.append(comm.command)
+        commvis.append(comm)
+        
+        for c in [x for x in self.cotensor_nodes if not x in cotvis]:
+            if c.attachable(compvis + cotvis + commvis + muvis):
+                c_match.append(c.cotensor)
+                cotvis.append(c)
+        
+        m = []
+        outgoing = False
+        if comp.get_outgoing(muvis):
+            m = comp.get_outgoing(muvis)
+            outgoing = True
+        else:
+            leftover_mu = [x for x in self.mu_comu_edges if not x in muvis]
+            for mu in leftover_mu:
+                if mu.origin in compvis + cotvis:
+                    m.append(mu)
+                elif mu.destination in compvis + cotvis:
+                    m.append(mu)
+                    
+        if not m:
+            return []
+        
+        temp_match = []
+        for mu in m:
+            x = c_match + [mu.mu_comu]
+            mvis = muvis + [mu]
+            s = {}
+            for k,v in subs.items():
+                s[k] = v
+            if outgoing:
+                s[comp] = mu.destination
+            y = self.recursive_match(x, s, compvis, cotvis, commvis, mvis)
+            if y:
+                temp_match.extend(y)
+        
+        return temp_match
         
   
 class Node(object):
@@ -120,7 +138,6 @@ class Component(Node):
         self.graph = g
         self.component = component
         self.outgoing_mu_comu = []
-        self.visited = False
     
     def set_command(self, command):
         self.command = command
@@ -128,8 +145,8 @@ class Component(Node):
     def add_outgoing_mu_comu(self, m):
         self.outgoing_mu_comu.append(m)
         
-    def get_outgoing(self):
-        return [x for x in self.outgoing_mu_comu if not x.visited]
+    def get_outgoing(self, mu_vis):
+        return [x for x in self.outgoing_mu_comu if not x in mu_vis]
     
 
 class Cotensor(Node):
@@ -139,7 +156,6 @@ class Cotensor(Node):
         self.graph = g
         self.cotensor = cotensor
         self.attached = []
-        self.visited = False
         
     def get_attached(self):
         [t1, t2] = self.cotensor.non_main_connections()
@@ -162,8 +178,8 @@ class Cotensor(Node):
                     
         self.attached = attach
         
-    def attachable(self):
-        if not [x for x in self.attached if not x.visited]:
+    def attachable(self, visited):
+        if not [x for x in self.attached if not x in visited]:
             return True
         return False
         
@@ -223,7 +239,6 @@ class Mu_Comu(Edge):
         self.graph = g
         self.mu_comu = mu_comu
         self.set_origin_and_destination(mu_comu)
-        self.visited = False
         
         # Working assumption 1
         if isinstance(self.origin, Component) and isinstance(self.destination, Component):
@@ -236,7 +251,6 @@ class Command(Edge):
         self.graph = g
         self.command = command
         self.set_origin_and_destination(command)
-        self.visited = False
         
         # Working assumption 2
         self.graph.component_nodes[index].set_command(self)

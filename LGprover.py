@@ -254,7 +254,7 @@ def main():
                 
             # Step 2: Calculate term in order of matching
             # Working Assumption 3 -> only 1 match
-            matching = [graph.match()]
+            matching = graph.match()
             
             # Step 3: Write to TeX
             

@@ -108,6 +108,7 @@ def main():
         sys.exit()
     raw_sequent = args.sequent[0]
     
+    lexicon = []
     if args.lexicon:
         lexicon, classes.polarity = build_lexicon(args.lexicon)
     
@@ -265,10 +266,12 @@ def main():
             f.write("\\begin{minipage}{0.70\\textwidth}\n")
             f.write("\\begin{center}\n")
             
-            if not [x for x in matching if not x == []]:
+            non_empty_match = [x for x in matching if not x == []]
+            
+            if not non_empty_match:
                 f.write('$' + operators_to_TeX(composition_graph.main.hypothesis) + '$')
             
-            for m in [x for x in matching if not x == []]:
+            for m in non_empty_match:
                 
                 term = []
                 subs = []
@@ -316,7 +319,7 @@ def main():
                         
                     term = mu + source + ['.'] + term  
                     subs.append(target[0])  
-
+                
                 f.write("$")
                 for x in term:
                     translation = {

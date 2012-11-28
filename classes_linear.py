@@ -350,8 +350,8 @@ class Vertex(object):
             if hypo:
                 tensor = self.conclusion
             else:
-                tensor = self.hypothesis           
-            if tensor.is_cotensor() or isinstance(tensor, Link):
+                tensor = self.hypothesis
+            if isinstance(tensor, Link) or isinstance(tensor, str) or tensor.is_cotensor():
                 self.term = chr(next_alpha + 96)
                 next_alpha += 1
                 return [self.term]

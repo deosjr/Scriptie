@@ -69,6 +69,8 @@ def create_composition_graph(sequent, raw, possible_binding):
     for m in modules:
         if m.tensors:
             components.append([x for x in m.tensors if not x.is_cotensor()])
+            
+    components = [x for x in components if not x == []]
     
     # Creating the composition graph
     composition_graph = modules[0]

@@ -27,7 +27,7 @@ class Graph(object):
         
         for co in self.cotensor_nodes:
             co.get_attached()
-            
+   
     def add_component_node(self, c, i):
         component_node = Component(self, c, i)
         self.component_nodes[i] = component_node

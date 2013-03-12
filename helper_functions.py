@@ -46,12 +46,12 @@ def operators_to_TeX(string):
 
 def no_solutions():
     print "\nThere are no solutions"
-    sys.exit()
+    sys.exit(1)
     
     
 def syntax_error():
     print "\nSyntax error in formula"
-    sys.exit()
+    sys.exit(1)
 
 
 def lookup(label, lexicon):

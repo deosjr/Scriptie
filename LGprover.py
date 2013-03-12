@@ -63,12 +63,9 @@ def create_composition_graph(sequent, raw, possible_binding):
     # Unfolding (again)
     modules = unfold_all(sequent, raw)   
     
-    # Determining the components (maximal subgraphs)
-    # TODO: multiple components in a module?!
     components = []
     for m in modules:
-        if m.tensors:
-            components.append([x for x in m.tensors if not x.is_cotensor()])
+        components.extend(m.get_components())
             
     components = [x for x in components if not x == []]
     
@@ -83,20 +80,6 @@ def create_composition_graph(sequent, raw, possible_binding):
     
     command = [l for l in composition_graph.links if l.is_command()]
     mu_comu = [l for l in composition_graph.links if not l.is_command()]
-    
-    # Arranging commands to index of components
-    # Working Assumption 2
-    shuffled = [0 for x in command]
-    for l in command:
-        if isinstance(l.top.hypothesis, classes.Tensor):
-            for c in components:
-                if l.top.hypothesis in c:
-                    shuffled[components.index(c)] = l
-        if isinstance(l.bottom.conclusion, classes.Tensor):
-            for c in components:
-                if l.bottom.conclusion in c:
-                    shuffled[components.index(c)] = l
-    command = shuffled
     
     return composition_graph, components, command, mu_comu
     
@@ -256,7 +239,6 @@ def main():
             graph = g.Graph(components, cotensors, mu_comu, command)              
                 
             # Step 2: Calculate term in order of matching
-            # Working Assumption 3 -> only 1 match
             matching = graph.match()
             
             # Step 3: Write to TeX

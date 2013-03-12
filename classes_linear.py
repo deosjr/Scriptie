@@ -151,6 +151,28 @@ class ProofStructure(object):
             # Disconnected part remains
             connected_and_acyclic = False
         return connected_and_acyclic            
+
+    # Determining the components (maximal subgraphs)
+    def get_components(self):
+
+        tens = [[x] for x in self.tensors if not x.is_cotensor()]
+
+        if len(tens) < 2:
+            return tens
+
+        trial = True
+        while trial:
+            trial = False
+            x = tens[0][0]
+            for y in tens[1:]:
+                if shortest_path(self,x,y[0]) is not None:
+                    tens[0].append(y[0])
+                    tens.remove(y)
+                    trial = True
+            if len(tens) < 2:
+                return tens
+        
+        return tens
         
     def toTeX(self, first):    
         global texlist, drawn
@@ -760,10 +782,11 @@ def shortest_path(proofnet, source, target):
         # This means there are tensors left 
         # that are unreachable from source
         if dist[u] == len(proofnet.tensors):
+            return None
             break 
             
         n = u.neighbors()
-        if u is source:
+        if u is source and target in n:
             n.remove(target)
             
         for v in n:

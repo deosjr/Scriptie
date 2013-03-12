@@ -75,6 +75,9 @@ class Graph(object):
         commvis = [x for x in comm_vis]
         muvis = [x for x in mu_vis]
         
+        if not hasattr(comp, 'command'):
+            return [match]
+
         comm = comp.command
         if comp in compvis:
             comm = subs[comp].command

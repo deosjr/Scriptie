@@ -8,18 +8,24 @@ class Term(object):
     def __init__(self):
         print "error"
 
-
 class Atomic_Term(Term):
 
     def __init__(self, atom=None):
         global next_alpha
+        self.text = False
         if atom:
             self.atom = atom
+            self.text = True
         else:
-            self.atom = chr(96 + next_alpha)
-            next_alpha += 1
+            self.atom = None 
 
     def term2list(self):
+        global next_alpha
+        if self.text:
+            return ['\\textrm{' + self.atom + '}']
+        if not self.atom:
+            self.atom = chr(96 + next_alpha)
+            next_alpha += 1
         return [self.atom]
 
 

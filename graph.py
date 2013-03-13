@@ -150,13 +150,12 @@ class Graph(object):
             while m:
                 # Command
                 comlink = m.pop(0)
-                left = comlink.top.get_term(False)
-                right = comlink.bottom.get_term(True)
+                left = comlink.top.get_term(False).term2list()
+                right = comlink.bottom.get_term(True).term2list()
                 harpoon = ['/|']
                 if comlink.positive():
                     harpoon = ['|`']
                 # TODO: substitutions (method of Term object?)
-                """
                     for x in subs:
                         if x in left:
                             insertion = ['('] + term + [')']
@@ -170,8 +169,8 @@ class Graph(object):
                             index = right.index(x)
                             right = right[:index] + insertion + right[index+1:]
                             break   # Because more than one substitution is not possible, right?
-                """
-                term = ['<'] + left.term2list() + harpoon + right.term2list() + ['>']
+                
+                term = ['<'] + left + harpoon + right + ['>']
                 
                 # (Possible) Cotensor(s)
                 while isinstance(m[0], classes.Tensor):
@@ -193,10 +192,10 @@ class Graph(object):
                     target = mulink.bottom.get_term(True)
                     
                 term = mu + source.term2list() + ['.'] + term  
-                subs.append(target.term2list())  
+                subs.extend(target.term2list())  
             
             f.write("$")
-            
+
             for x in term:
                 translation = {
                 "mu":"\\mu",

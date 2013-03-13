@@ -242,7 +242,7 @@ def main():
             matching = graph.match()
             
             # Step 3: Write to TeX
-            graph.to_TeX(matching)
+            graph.to_TeX(matching, composition_graph)
             
         # For debugging
         # proof_net.print_debug() 

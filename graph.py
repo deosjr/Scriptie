@@ -3,6 +3,7 @@
 # 2 - All components have a single command link attached
 
 import classes_linear as classes
+from helper_functions import *
 
 
 class Graph(object):
@@ -127,7 +128,7 @@ class Graph(object):
         
         return temp_match
 
-    def to_TeX(self, matching):
+    def to_TeX(self, matching, cgraph):
         f = open('formula.tex', 'a')
         f.write("{\\scalefont{0.7}\n")
         f.write("\\begin{tikzpicture}\n")
@@ -138,12 +139,12 @@ class Graph(object):
         non_empty_match = [x for x in matching if not x == []]
         
         if not non_empty_match:
-            f.write('$' + operators_to_TeX(composition_graph.main.hypothesis) + '$')
+            f.write('$' + operators_to_TeX(cgraph.main.hypothesis) + '$')
         
         for m in non_empty_match:
             
             term = []
-            subs = []
+            #subs = []
             
             while m:
                 # Command
@@ -167,10 +168,12 @@ class Graph(object):
                             right = right[:index] + insertion + right[index+1:]
                             break   # Because more than one substitution is not possible, right?
                 term = ['<'] + left + harpoon + right + ['>']
+                #print term
                 
                 # (Possible) Cotensor(s)
                 while isinstance(m[0], classes.Tensor):
                     term = m.pop(0).get_term() + ['.'] + term
+                    #print term
                 
                 # Mu / Comu
                 mulink = m.pop(0)
@@ -188,6 +191,7 @@ class Graph(object):
                     
                 term = mu + source + ['.'] + term  
                 subs.append(target[0])  
+                #print term
             
             f.write("$")
             for x in term:

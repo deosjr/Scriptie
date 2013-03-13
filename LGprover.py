@@ -17,6 +17,7 @@ import classes_linear as classes
 import argparser
 from table import Table
 import graph as g
+import term
 
 import os, sys
 import platform
@@ -27,8 +28,8 @@ import itertools
 def unfold_formula(formula, raw, hypothesis):
     vertex = classes.Vertex(formula, hypothesis)
     structure = classes.ProofStructure(formula, vertex)
-    vertex.is_value = True      #TODO: check this
-    vertex.term = raw
+    vertex.is_value = True      
+    vertex.term = term.Atomic_Term(raw)
     if simple_formula(formula):
         structure.add_atom(vertex,hypothesis)
     else:

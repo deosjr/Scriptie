@@ -4,6 +4,7 @@
 
 import classes_linear as classes
 from helper_functions import *
+import term
 
 
 class Graph(object):
@@ -144,7 +145,7 @@ class Graph(object):
         for m in non_empty_match:
             
             term = []
-            #subs = []
+            subs = []
             
             while m:
                 # Command
@@ -154,6 +155,8 @@ class Graph(object):
                 harpoon = ['/|']
                 if comlink.positive():
                     harpoon = ['|`']
+                # TODO: substitutions (method of Term object?)
+                """
                     for x in subs:
                         if x in left:
                             insertion = ['('] + term + [')']
@@ -167,13 +170,13 @@ class Graph(object):
                             index = right.index(x)
                             right = right[:index] + insertion + right[index+1:]
                             break   # Because more than one substitution is not possible, right?
-                term = ['<'] + left + harpoon + right + ['>']
-                #print term
+                """
+                term = ['<'] + left.term2list() + harpoon + right.term2list() + ['>']
                 
                 # (Possible) Cotensor(s)
                 while isinstance(m[0], classes.Tensor):
-                    term = m.pop(0).get_term() + ['.'] + term
-                    #print term
+                    cotensor = m.pop(0)
+                    term = cotensor.get_term().term2list() + ['.'] + term
                 
                 # Mu / Comu
                 mulink = m.pop(0)
@@ -189,11 +192,11 @@ class Graph(object):
                     source = mulink.top.get_term(False)
                     target = mulink.bottom.get_term(True)
                     
-                term = mu + source + ['.'] + term  
-                subs.append(target[0])  
-                #print term
+                term = mu + source.term2list() + ['.'] + term  
+                subs.append(target.term2list())  
             
             f.write("$")
+            
             for x in term:
                 translation = {
                 "mu":"\\mu",

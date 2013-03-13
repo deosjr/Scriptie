@@ -2,13 +2,13 @@ from helper_functions import *
 import argparser
 import sys
 import pyparsing
+import term
 
 drawn = []
 texlist = []
 vertices = {}
 removed = 0
 polarity = {}
-next_alpha = 0
 
 
 class ProofStructure(object):
@@ -366,25 +366,25 @@ class Vertex(object):
     # l.top.get_term(False)
     # l.bottom.get_term(True)
     def get_term(self, hypo):
-        global next_alpha
-        if not simple_formula(self.term):
+        if not isinstance(self.term, term.Atomic_Term):
             tensor = None
             if hypo:
                 tensor = self.conclusion
             else:
                 tensor = self.hypothesis
+
             if isinstance(tensor, Link) or isinstance(tensor, str) or tensor.is_cotensor():
-                self.term = chr(next_alpha + 96)
-                next_alpha += 1
-                return [self.term]
+                self.term = term.Atomic_Term()
+                return self.term
+
+            # Now we can assume self.term is a connective (right?)
+
             left = tensor.left.get_term(tensor.left.hypothesis is tensor)
             right = tensor.right.get_term(tensor.right.hypothesis is tensor)
-            if not simple_formula("".join(left)):
-                left = ['('] + left + [')']
-            if not simple_formula("".join(right)):
-                right = ['('] + right + [')']
-            return left + [self.term] + right
-        return [self.term]
+
+            self.term = term.Complex_Term(left, self.term, right)       
+
+        return self.term
             
     # This is the source of the recursion        
     def unfold(self, formula, hypo, structure, i=None):
@@ -462,12 +462,11 @@ class Tensor(object):
         return vertex
         
     def eval_formula(self, part, hypo, is_value):
-        global next_alpha, polarity
+        global polarity
         if simple_formula(part):
             atom = Vertex(part, hypo)
             self.structure.add_atom(atom, not hypo)
-            atom.term = chr(next_alpha + 96)
-            next_alpha += 1
+            atom.term = term.Atomic_Term()
             if part in polarity:
                 atom.polarity = polarity[part]
             else:
@@ -486,6 +485,15 @@ class Tensor(object):
             else:
                 vertex.main = part
             return vertex
+
+    def get_term(self):
+
+        # term has never been evaluated before
+        if isinstance(self.term, str):
+            t1 = self.left.get_term(self.left.hypothesis is self)
+            t2 = self.right.get_term(self.right.hypothesis is self)
+            self.term = term.Cotensor_Term(t1, t2, self.main.get_term(self.main.hypothesis is self))
+        return self.term
             
     def neighbors(self):
         n = []
@@ -585,14 +593,7 @@ class OneHypothesis(Tensor):
                         #R/  
                         return (t, t.topLeft, False, s)
         
-        return (None, None, None, None)           
-        
-    def get_term(self):
-        if isinstance(self.term, str):
-            t1 = self.left.term
-            t2 = self.right.term
-            self.term = ['\\frac{'] + [t1] + [t2] + ['}{'] + [self.main.term] + ['}']
-        return self.term
+        return (None, None, None, None)  
         
     def set_left_and_right(self):
         if self.term[0] is 'l':
@@ -685,13 +686,6 @@ class TwoHypotheses(Tensor):
                         return (t, t.bottomLeft, True, s)
         
         return (None, None, None, None)  
-
-    def get_term(self):
-        if isinstance(self.term, str):
-            t1 = self.left.term
-            t2 = self.right.term
-            self.term = ['\\frac{'] + [t1] + [t2] + ['}{'] + [self.main.term] + ['}']
-        return self.term
         
     def set_left_and_right(self):
         if self.term[0] is 'l':

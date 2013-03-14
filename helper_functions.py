@@ -129,4 +129,21 @@ def con_pol(connective):
     }
     return c[connective]
     
+def term2tex(x):
+    translation = {
+        "mu":"\\mu",
+        "comu":"\\tilde{\\mu}",
+        "/|":"\\upharpoonleft",
+        "|`":"\\upharpoonright",
+        "<":"\\langle",
+        ">":"\\rangle",
+        '\\':"\\backslash",
+        "(*)":"\oplus",
+        "*":"\otimes",
+        "(/)":"\oslash",
+        "(\\)":"\obslash"
+        }
+    if x in translation:
+        return translation[x]
+    return x
     

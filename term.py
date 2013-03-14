@@ -8,6 +8,7 @@ class Term(object):
     def __init__(self):
         print "error"
 
+
 class Atomic_Term(Term):
 
     def __init__(self, atom=None):
@@ -29,10 +30,19 @@ class Atomic_Term(Term):
         return [self.atom]
 
 
+class Connective_Term(Term):
+
+    def __init__(self, con):
+        self.connective = con
+
+    def term2list(self):
+        return [self.connective]
+
+
 class Complex_Term(Term):
 
-    def __init__(self, left, functor, right):
-        self.functor = functor
+    def __init__(self, left, middle, right):
+        self.middle = middle
         self.left = left
         self.right = right
 
@@ -47,7 +57,7 @@ class Complex_Term(Term):
         if isinstance(right, Complex_Term):
             right = ['('] + right + [')']
 
-        return left + [self.functor] + right
+        return left + self.middle.term2list() + right
 
 
 class Cotensor_Term(Complex_Term):

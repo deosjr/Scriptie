@@ -366,7 +366,7 @@ class Vertex(object):
     # l.top.get_term(False)
     # l.bottom.get_term(True)
     def get_term(self, hypo):
-        if not isinstance(self.term, term.Atomic_Term):
+        if isinstance(self.term, term.Connective_Term):
             tensor = None
             if hypo:
                 tensor = self.conclusion
@@ -377,12 +377,11 @@ class Vertex(object):
                 self.term = term.Atomic_Term()
                 return self.term
 
-            # Now we can assume self.term is a connective (right?)
-
+            # Now we can assume self.term is a Term object
             left = tensor.left.get_term(tensor.left.hypothesis is tensor)
             right = tensor.right.get_term(tensor.right.hypothesis is tensor)
 
-            self.term = term.Complex_Term(left, self.term, right)       
+            self.term = term.Complex_Term(left, self.term, right)
 
         return self.term
             
@@ -394,8 +393,8 @@ class Vertex(object):
             syntax_error()
         vertex = Vertex(formula)
         if i is not None:
-            self.term = connective
-        vertex.term = connective
+            self.term = term.Connective_Term(connective)
+        vertex.term = term.Connective_Term(connective)
         self.polarity = con_pol(connective)
         vertex.polarity = self.polarity
         if hypo:

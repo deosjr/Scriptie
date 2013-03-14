@@ -1,6 +1,6 @@
 # Working assumptions : 
 # 1 - All components are connected by mu/comu-links
-# 2 - All components have a single command link attached
+# 2 - All components have a single command link attached (not true)
 
 import classes_linear as classes
 from helper_functions import *
@@ -77,6 +77,7 @@ class Graph(object):
         commvis = [x for x in comm_vis]
         muvis = [x for x in mu_vis]
         
+        # Temporary hack, should not be allowed
         if not hasattr(comp, 'command'):
             return [match]
 
@@ -143,77 +144,13 @@ class Graph(object):
             f.write('$' + operators_to_TeX(cgraph.main.hypothesis) + '$')
         
         for m in non_empty_match:
-            
-            term = []
-            subs = []
-            
-            while m:
-                # Command
-                comlink = m.pop(0)
-                left = comlink.top.get_term(False).term2list()
-                right = comlink.bottom.get_term(True).term2list()
-                harpoon = ['/|']
-                if comlink.positive():
-                    harpoon = ['|`']
-                # TODO: substitutions (method of Term object?)
-                    for x in subs:
-                        if x in left:
-                            insertion = ['('] + term + [')']
-                            index = left.index(x)
-                            left = left[:index] + insertion + left[index+1:]
-                            break   # Because more than one substitution is not possible, right?
-                else:
-                    for x in subs:
-                        if x in right:
-                            insertion = ['('] + term + [')']
-                            index = right.index(x)
-                            right = right[:index] + insertion + right[index+1:]
-                            break   # Because more than one substitution is not possible, right?
-                
-                term = ['<'] + left + harpoon + right + ['>']
-                
-                # (Possible) Cotensor(s)
-                while isinstance(m[0], classes.Tensor):
-                    cotensor = m.pop(0)
-                    term = cotensor.get_term().term2list() + ['.'] + term
-                
-                # Mu / Comu
-                mulink = m.pop(0)
-                mu = []
-                source = None
-                target = None
-                if mulink.positive():
-                    mu = ["comu"]
-                    source = mulink.bottom.get_term(True)
-                    target = mulink.top.get_term(False)
-                else:
-                    mu = ["mu"]
-                    source = mulink.top.get_term(False)
-                    target = mulink.bottom.get_term(True)
-                    
-                term = mu + source.term2list() + ['.'] + term  
-                subs.extend(target.term2list())  
+
+            term = self.linear_term(m) 
             
             f.write("$")
 
             for x in term:
-                translation = {
-                "mu":"\\mu",
-                "comu":"\\tilde{\\mu}",
-                "/|":"\\upharpoonleft",
-                "|`":"\\upharpoonright",
-                "<":"\\langle",
-                ">":"\\rangle",
-                '\\':"\\backslash",
-                "(*)":"\oplus",
-                "*":"\otimes",
-                "(/)":"\oslash",
-                "(\\)":"\obslash"
-                }
-                if x in translation:
-                    f.write(translation[x])
-                else:
-                    f.write(x)
+                f.write(term2tex(x))
                 f.write(" ")
             f.write("$\n\n")
             f.write("\\vspace{5mm}\n")
@@ -222,6 +159,58 @@ class Graph(object):
         f.write("\end{minipage}\n\n};\n")
         f.write("\end{tikzpicture}}\n")
         f.close()
+
+    def linear_term(self, m):
+        term = []
+        subs = []
+        
+        while m:
+            # Command
+            comlink = m.pop(0)
+            left = comlink.top.get_term(False).term2list()
+            right = comlink.bottom.get_term(True).term2list()
+            harpoon = ['/|']
+            if comlink.positive():
+                harpoon = ['|`']
+            # TODO: substitutions (method of Term object?)
+                for x in subs:
+                    if x in left:
+                        insertion = ['('] + term + [')']
+                        index = left.index(x)
+                        left = left[:index] + insertion + left[index+1:]
+                        break   # Because more than one substitution is not possible, right?
+            else:
+                for x in subs:
+                    if x in right:
+                        insertion = ['('] + term + [')']
+                        index = right.index(x)
+                        right = right[:index] + insertion + right[index+1:]
+                        break   # Because more than one substitution is not possible, right?
+            
+            term = ['<'] + left + harpoon + right + ['>']
+
+            # (Possible) Cotensor(s)
+            while isinstance(m[0], classes.Tensor):
+                cotensor = m.pop(0)
+                term = cotensor.get_term().term2list() + ['.'] + term
+            
+            # Mu / Comu
+            mulink = m.pop(0)
+            mu = []
+            source = None
+            target = None
+            if mulink.positive():
+                mu = ["comu"]
+                source = mulink.bottom.get_term(True)
+                target = mulink.top.get_term(False)
+            else:
+                mu = ["mu"]
+                source = mulink.top.get_term(False)
+                target = mulink.bottom.get_term(True)
+                
+            term = mu + source.term2list() + ['.'] + term  
+            subs.extend(target.term2list())
+        return term
         
   
 class Node(object):
